@@ -43,7 +43,6 @@ class IVEstimatorDataset(BaseEstimatorDataset):
 
     WARNING: if both C and X_d are not given, then all covariates are assumed to be continuous!
     """
-    #data_path: str = None
     data: Union[str, np.ndarray, pd.DataFrame] = None
     C: Union[np.ndarray, Sequence] = None
     Y: Union[np.ndarray, pd.Series, Sequence] = None
@@ -51,6 +50,21 @@ class IVEstimatorDataset(BaseEstimatorDataset):
     D: Union[np.ndarray, pd.Series, Sequence] = None
     X_c: Union[np.ndarray, pd.Series, Sequence] = None
     X_d: Union[np.ndarray, pd.Series, Sequence] = None
+
+    # def __init__(self, data: Union[str, np.ndarray, pd.DataFrame] = None,
+    #                     C: Union[np.ndarray, Sequence] = None,
+    #                     Y: Union[np.ndarray, pd.Series, Sequence] = None,
+    #                     Z: Union[np.ndarray, pd.Series, Sequence] = None,
+    #                     D: Union[np.ndarray, pd.Series, Sequence] = None,
+    #                     X_c: Union[np.ndarray, pd.Series, Sequence] = None,
+    #                     X_d: Union[np.ndarray, pd.Series, Sequence] = None):
+    #     self.C = C
+    #     self.Y = Y
+    #     self.Z = Z
+    #     self.D = D
+    #     self.X_c = X_c
+    #     self.X_d = X_d
+    #     self.load_data(data, C, Y, Z, D, X_c, X_d)
 
     def __post_init__(self) -> None:
         """Initialize IV Estimator Dataset"""

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic.dataclasses import dataclass # Use pydantic for runtime type-checking
-# from dataclasses import dataclass
+from dataclasses import InitVar
 from pathlib import Path
 from typing import Tuple, Dict, Union, Sequence, Optional
 import warnings
@@ -26,9 +26,9 @@ class IVEstimatorDataset(BaseEstimatorDataset):
 
     Parameters
     -----------
-    data: Union[str, np.ndarray, pd.DataFrame]
+    data: InitVar[Union[str, np.ndarray, pd.DataFrame]]
         Data object or path to csv with columns assumed to be in order [Y, Z, D, X_d, X_c], unless C given
-    C: Union[np.ndarray, Sequence], default: 0:ncol(X)
+    C: InitVar[Sequence]
         List of column indices of continuous variables in X
     Y: Union[np.ndarray, pd.Series]
         Data object of outcome variable
@@ -43,35 +43,20 @@ class IVEstimatorDataset(BaseEstimatorDataset):
 
     WARNING: if both C and X_d are not given, then all covariates are assumed to be continuous!
     """
-    data: Union[str, np.ndarray, pd.DataFrame] = None
-    C: Union[np.ndarray, Sequence] = None
+    data: InitVar[Union[str, np.ndarray, pd.DataFrame]] = None
+    C: InitVar[Sequence] = None
     Y: Union[np.ndarray, pd.Series, Sequence] = None
     Z: Union[np.ndarray, pd.Series, Sequence] = None
     D: Union[np.ndarray, pd.Series, Sequence] = None
     X_c: Union[np.ndarray, pd.Series, Sequence] = None
     X_d: Union[np.ndarray, pd.Series, Sequence] = None
 
-    # def __init__(self, data: Union[str, np.ndarray, pd.DataFrame] = None,
-    #                     C: Union[np.ndarray, Sequence] = None,
-    #                     Y: Union[np.ndarray, pd.Series, Sequence] = None,
-    #                     Z: Union[np.ndarray, pd.Series, Sequence] = None,
-    #                     D: Union[np.ndarray, pd.Series, Sequence] = None,
-    #                     X_c: Union[np.ndarray, pd.Series, Sequence] = None,
-    #                     X_d: Union[np.ndarray, pd.Series, Sequence] = None):
-    #     self.C = C
-    #     self.Y = Y
-    #     self.Z = Z
-    #     self.D = D
-    #     self.X_c = X_c
-    #     self.X_d = X_d
-    #     self.load_data(data, C, Y, Z, D, X_c, X_d)
-
-    def __post_init__(self) -> None:
+    def __post_init__(self, data, C) -> None:
         """Initialize IV Estimator Dataset"""
-        self.load_data()
+        self.load_data(data, C)
 
     def load_data(self, data: Union[str, np.ndarray, pd.DataFrame] = None,
-                        C: Union[np.ndarray, Sequence] = None,
+                        C: Sequence = None,
                         Y: Union[np.ndarray, pd.Series, Sequence] = None,
                         Z: Union[np.ndarray, pd.Series, Sequence] = None,
                         D: Union[np.ndarray, pd.Series, Sequence] = None,
@@ -79,26 +64,20 @@ class IVEstimatorDataset(BaseEstimatorDataset):
                         X_d: Union[np.ndarray, pd.DataFrame, pd.Series, Sequence] = None) -> None:
         """
         Overwrite object data with an optional amount of IV Regression inputs.
-        All values are cast to numpy arrays, other than C, which is a list of indices.
-        If data is given, then all values are overwritten with the values in data.
+        All attributes are cast to numpy arrays. If data is given, then all values are overwritten with the values in data.
+        If C is not given, then the positions of the continuous variables are inferred to be after all the other variables.
         If input is None, then attribute is kept as is but cast to numpy array or list.
         """
         filled_vars = []
         for key, val in locals().items():
-            if key in ["self", "data"]:
+            if key in ["self", "data", "C"]:
                 continue
             if val is not None:
                 filled_vars.append(key)
-                if key=="C":
-                    setattr(self, key, list(val))
-                else:
-                    setattr(self, key, np.array(val))
+                setattr(self, key, np.array(val))
             else:
-                if key=="C":
-                    self.C = list(self.C)
-                else:
-                    val = self.__dict__[key]
-                    setattr(self, key, np.array(val))
+                val = self.__dict__[key]
+                setattr(self, key, np.array(val))
 
         # Cast data to numpy array for loading purposes
         if isinstance(data, str):
@@ -111,10 +90,10 @@ class IVEstimatorDataset(BaseEstimatorDataset):
             # in the asssumed order.
             unfilled_vars = [var for var in self.__dict__.keys() if var not in filled_vars]
             cts_start_ind = 0
-            if self.C is not None:
-                self.X_c = data[:,self.C]
+            if C is not None:
+                self.X_c = data[:,C]
                 # Set attributes for whatever was not explicitly overwritten
-                data = np.delete(data, self.C, axis=1)
+                data = np.delete(data, C, axis=1)
                 if len(unfilled_vars) > 0:
                     if "X_d" in unfilled_vars:
                         discrete_start_ind = len(unfilled_vars) - 1

@@ -98,7 +98,7 @@ class IVEstimatorDataset(BaseEstimatorDataset):
             data = np.delete(data, indices_to_remove, axis=1)
             if "X_c" in infer:
                 if "X_d" in infer:
-                    warnings.warn("Neither continuous nor discrete indices were explicitly given. We will assume all covariates in data are continuous.")
+                    warnings.warn("Neither continuous nor discrete indices were explicitly given. We will assume all covariates in data are continuous.", stacklevel=2)
                     cts_start_ind = len(infer) - 2 # Account for X_d being left as None
                     infer.remove("X_d")
                 else:
@@ -121,3 +121,5 @@ class IVEstimatorDataset(BaseEstimatorDataset):
                 # TODO: Enforce data object type if `data` not passed!
                 val = np.array(val)
                 setattr(self, key, val)
+    def preprocess(self) -> None:
+        pass

@@ -19,9 +19,11 @@ def check_is_fitted(estimator):
 #   - mu: mean of continuous variables (p_c x 1)
 #   - sigma: std of continuous variables (p_c x 1)
 #   - sess: ONNX Runtime session that returns a numpy array of outcomes
+#   - dtype: data type of ONNX input - defaults to np.float32
 
 # Output: p^s(X_i; delta) (scalar within [0,1])
-def computeQPS(X_ci: np.ndarray, X_di: np.ndarray, S: int, delta: int, mu: float, sigma: float, sess: rt.InferenceSession, seed: int):
+def _computeQPS(X_ci: np.ndarray, type: np.dtype, S: int, delta: int, mu: float, sigma: float, sess: rt.InferenceSession,
+                X_di: np.ndarray = None):
     p_c = len(X_ci) # Number of continuous variables
     delta_vec = np.array([delta] * p_c)
     standard_draws = np.random.normal(size=(S,p_c)) # S draws from standard normal
@@ -34,12 +36,17 @@ def computeQPS(X_ci: np.ndarray, X_di: np.ndarray, S: int, delta: int, mu: float
 
     # Compute QPS
     # We assume ML can take multiple rows of inputs and returns a numpy array of predictions.
-    X_d_long = np.tile(X_di, (destandard_draws.shape[0], 1))
-    inputs = np.append(destandard_draws, X_d_long, axis=1) # TODO: how to ensure that the model inputs are in this order?
+    if X_di is None:
+        inputs = destandard_draws.astype(type)
+    else:
+        X_d_long = np.tile(X_di, (destandard_draws.shape[0], 1))
+        inputs = np.append(destandard_draws, X_d_long, axis=1).astype(type) # TODO: how to ensure that the model inputs are in this order?
 
     # Run inference using ONNX runtime
     input_name = sess.get_inputs()[0].name
-    qps = np.mean(sess.run(None, {input_name: inputs}))
+    label_name = sess.get_outputs()[1].name # Probabilities from logistic regression are in the 2nd output node
+    ml_out = sess.run([label_name], {input_name: inputs})[0]
+    qps = np.mean(np.array([d[1] for d in ml_out]))
     return(qps)
 
 # Description:
@@ -53,7 +60,8 @@ def computeQPS(X_ci: np.ndarray, X_di: np.ndarray, S: int, delta: int, mu: float
 #   - ML_onnx: path to ML ONNX object that can take a 2d np array of inputs
 #   - seed: random seed
 # Returns: np array of estimated QPS (nx1)
-def estimate_qps(X_c: np.ndarray, X_d: np.ndarray, S: int, delta: int, ML_onnx: str, seed: int):
+def estimate_qps(X_c: np.ndarray, S: int, delta: int, ML_onnx: str, X_d: np.ndarray = None, seed: int = None,
+                 type: np.dtype = np.float32):
 
     # === Standardize continuous variables ===
     # Formula: (X_ik - u_k)/o_k; k represents a continuous variable
@@ -63,12 +71,16 @@ def estimate_qps(X_c: np.ndarray, X_d: np.ndarray, S: int, delta: int, ML_onnx: 
 
     # TODO: parallelize the QPS estimation across individuals (seems like the most natural way to do it)
     #   - How does this work with GPU? Can we somehow partition the parallel jobs on the same GPU.
+    if seed is not None:
+        np.random.seed(seed)
     sess = rt.InferenceSession(ML_onnx)
     QPS_vec = []
-    for i in range(len(X)):
-        QPS_vec.append(computeQPS(X_c[i,:],X_d[i,:], S, delta, mu, sigma, sess, seed)) # Compute QPS for each individual i
+    for i in range(X_c.shape[0]):
+        if X_d is None:
+            QPS_vec.append(_computeQPS(X_c[i,], type, S, delta, mu, sigma, sess)) # Compute QPS for each individual i
+        else:
+            QPS_vec.append(_computeQPS(X_c[i,], type, S, delta, mu, sigma, sess, X_di = X_d[i,])) # Compute QPS for each individual i
     QPS_vec = np.array(QPS_vec)
-
     return QPS_vec
 
 def convert_to_onnx(model, path: str, framework: str, **kwargs) -> str:

@@ -1,14 +1,12 @@
 # Testing the dataset Class
 import sys
 import os
-sys.path.append(os.path.abspath("../mlisne"))
-
 import pandas as pd
 import numpy as np
 import pytest
 from pathlib import Path
 
-from dataset import IVEstimatorDataset
+from mlisne.dataset import IVEstimatorDataset
 
 
 

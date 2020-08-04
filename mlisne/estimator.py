@@ -94,7 +94,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def coef(self):
         # Returns: np array of estimated coefficients, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__coef
 
@@ -102,7 +102,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def varcov(self):
         # Returns: variance-covariance matrix, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__varcov
 
@@ -110,7 +110,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def fitted(self):
         # Returns: fitted values, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__fitted
 
@@ -118,7 +118,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def resid(self):
         # Returns: residuals, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__resid
 
@@ -126,7 +126,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def tstat(self):
         # Returns: count of fitted values, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__tstat
 
@@ -134,7 +134,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def std_error(self):
         # Returns: count of fitted values, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__std_error
 
@@ -142,7 +142,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def p(self):
         # Returns: count of fitted values, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__p
 
@@ -150,7 +150,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def n_fit(self):
         # Returns: count of fitted values, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__N
 
@@ -158,7 +158,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def ci(self):
         # Returns: Second stage coefficient CI, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return np.stack((self.__lowerci, self.__upperci), axis=1)
 
@@ -166,7 +166,7 @@ class TreatmentIVEstimator(BaseEstimator):
     def inputs(self):
         # Returns: Second stage adjusted inputs, if fitted
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__inputs
 
@@ -176,7 +176,7 @@ class TreatmentIVEstimator(BaseEstimator):
         Returns dictionary of attributes.
         """
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         elif self.__postest is None:
             print("First time calling post-estimation. Computing values...")
@@ -193,7 +193,7 @@ class TreatmentIVEstimator(BaseEstimator):
     @property
     def firststage(self):
         if not self.__fit:
-            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=3)
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__firststage
     def _fit_firststage(self, X, D, single_nondegen):

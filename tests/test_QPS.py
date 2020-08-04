@@ -10,7 +10,7 @@ import onnxruntime as rt
 from pathlib import Path
 
 from mlisne.dataset import IVEstimatorDataset
-from mlisne.helpers import estimate_qps
+from mlisne.qps import estimate_qps
 
 sklearn_logreg = str(Path(__file__).resolve().parents[1] / "examples" / "models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[1] / "examples" / "models" / "logreg_iris_double.onnx")
@@ -35,29 +35,27 @@ def iris_dataset_discrete():
     return dt
 
 def test_estimate_nodiscrete_skl(iris_dataset):
-    qps = estimate_qps(iris_dataset.X_c, S=100, delta=0.8, ML_onnx=sklearn_logreg)
+    qps = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg)
     print(qps)
     assert qps.shape[0] == iris_dataset.Y.shape[0]
 
 def test_seed_skl(iris_dataset):
     seed = np.random.choice(range(100))
-    qps1 = estimate_qps(iris_dataset.X_c, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed)
-    qps2 = estimate_qps(iris_dataset.X_c, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed)
+    qps1 = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed)
+    qps2 = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed)
     assert np.array_equal(qps1, qps2)
 
 def test_estimate_withdiscrete_skl(iris_dataset_discrete):
-    qps = estimate_qps(iris_dataset_discrete.X_c, X_d = iris_dataset_discrete.X_d, S=100, delta=0.8, ML_onnx=sklearn_logreg)
+    qps = estimate_qps(iris_dataset_discrete, S=100, delta=0.8, ML_onnx=sklearn_logreg)
     print(qps)
     assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]
 
 def test_estimate_double_skl(iris_dataset_discrete):
-    qps = estimate_qps(iris_dataset_discrete.X_c, X_d = iris_dataset_discrete.X_d,
-                       S=100, delta=0.8, ML_onnx=sklearn_logreg_double, type=np.float64)
+    qps = estimate_qps(iris_dataset_discrete, S=100, delta=0.8, ML_onnx=sklearn_logreg_double, types=(np.float64, None))
     print(qps)
     assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]
 
 def test_estimate_infer_skl(iris_dataset_discrete):
-    qps = estimate_qps(iris_dataset_discrete.X_c, X_d = iris_dataset_discrete.X_d,
-                       S=100, delta=0.8, ML_onnx=sklearn_logreg_infer)
+    qps = estimate_qps(iris_dataset_discrete, S=100, delta=0.8, ML_onnx=sklearn_logreg_infer)
     print(qps)
     assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]

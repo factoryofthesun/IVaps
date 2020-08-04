@@ -111,7 +111,7 @@ class IVEstimatorDataset(BaseEstimatorDataset):
                 infer.remove("X_d")
             for i in range(len(infer)):
                 setattr(self, infer[i], data[:,i])
-        # Overwrite data objects
+        # If data not given, then override data objects
         else:
             for key, val in locals().items():
                 if key in ["self", "data", "infer"]:

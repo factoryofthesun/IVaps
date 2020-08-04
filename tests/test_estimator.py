@@ -12,7 +12,7 @@ from linearmodels.iv import IV2SLS
 import statsmodels.api as sm
 
 from mlisne.dataset import IVEstimatorDataset
-from mlisne.helpers import estimate_qps
+from mlisne.qps import estimate_qps
 from mlisne.estimator import TreatmentIVEstimator
 
 model_path = str(Path(__file__).resolve().parents[1] / "examples" / "models")
@@ -48,7 +48,7 @@ def test_iris_estimation(empty_estimator, iris_data):
     empty_estimator.fit(dataset, qps)
 
     print(empty_estimator) # Should print summary table
-    
+
     # Test second stage values
     coef = empty_estimator.coef
     N = empty_estimator.n_fit
@@ -125,7 +125,7 @@ def test_iris_estimation(empty_estimator, iris_data):
 def test_iris_pipeline(empty_estimator, iris_data):
     data = np.array(iris_data.drop("QPS", axis=1))
     dataset = IVEstimatorDataset(data)
-    qps = estimate_qps(dataset.X_c, 100, 0.8, f"{model_path}/logreg_iris.onnx")
+    qps = estimate_qps(dataset, 100, 0.8, f"{model_path}/logreg_iris.onnx")
     empty_estimator.fit(dataset, qps)
     adj_inps = empty_estimator.inputs
 

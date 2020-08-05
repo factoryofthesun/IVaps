@@ -14,8 +14,20 @@ from mlisne.dataset import IVEstimatorDataset
 def check_is_fitted(estimator):
     return
 
-def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: int = 1, **kwargs) -> None:
-    """Convenience wrapper to quickly convert to ONNX model with expected arguments"""
+def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: int = 1, **kwargs) -> bool:
+    """Convenience wrapper to quickly convert and save ONNX model with expected input/output settings
+
+    Arguments
+    ---------
+    model: fitted model object
+    dummy_input: 1D input array or 2-tuple of continuous and discrete input arrays; for type inference
+    path: string path to save ONNX model
+    framework: one of the currently implemented frameworks {"sklearn", "pytorch"}
+    input_type: 1 if single array input, 2 if model takes continuous and discrete values separately
+    **kwargs: keyword arguments to be passed into mltools conversion function
+
+    Returns: Boolean flag indicating successful conversion
+    """
     if framework == "sklearn":
         if input_type == 1:
             tensortype = _guess_numpy_type(dummy_input.dtype)
@@ -30,19 +42,22 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
         onx = convert_sklearn(model, initial_types=initial_type, **kwargs)
         with open(path, "wb") as f:
             f.write(onx.SerializeToString())
-        return
+        return True
     if framework == "pytorch":
         if input_type == 1:
             torch.onnx.export(model, dummy_input, path, input_names=['input'], output_names=['output_probability'],
-                              dynamic_axes={'inputs':{0:'N'},'output_probability':{0, 'N'}})
+                              dynamic_axes={'input':{0:'N'},'output_probability':{0:'N'}})
         elif input_type == 2:
             torch.onnx.export(model, dummy_input, path, input_names=['c_inputs', 'd_inputs'], output_names=['output_probability'],
-                              dynamic_axes={'c_inputs':{0:'N'}, 'd_inputs':{0:'N'}, 'output_probability':{0, 'N'}})
+                              dynamic_axes={'c_inputs':{0:'N'}, 'd_inputs':{0:'N'}, 'output_probability':{0:'N'}})
         else:
             raise ValueError("input_type must be either 1 or 2")
+        return True
     else:
         print(f"{framework} conversion not yet implemented for this function."
                "Please see https://github.com/onnx/onnxmltools for more conversion functions.")
+        return False
+
 def _guess_numpy_type(data_type):
     if data_type == np.float32:
         return FloatTensorType

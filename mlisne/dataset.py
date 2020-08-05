@@ -43,8 +43,6 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         Data object of continuous variables (float)
     X_d: Union[np.ndarray, pd.DataFrame]
         Data object of discrete variables (int)
-    normalized: Boolean
-        Indicator for if continuous data is normalized
 
     WARNING: if both C and X_d are not given, then all covariates are assumed to be continuous!
     """
@@ -54,7 +52,6 @@ class IVEstimatorDataset(BaseEstimatorDataset):
     D: Union[int, np.ndarray, pd.Series, Sequence] = None
     X_c: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None
     X_d: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None
-    normalized: bool = False
 
     def __post_init__(self, data) -> None:
         """Initialize IV Estimator Dataset"""

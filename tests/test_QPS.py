@@ -12,9 +12,9 @@ from pathlib import Path
 from mlisne.dataset import IVEstimatorDataset
 from mlisne.qps import estimate_qps
 
-sklearn_logreg = str(Path(__file__).resolve().parents[1] / "examples" / "models" / "logreg_iris.onnx")
-sklearn_logreg_double = str(Path(__file__).resolve().parents[1] / "examples" / "models" / "logreg_iris_double.onnx")
-sklearn_logreg_infer = str(Path(__file__).resolve().parents[1] / "examples" / "models" / "logreg_iris_infertype.onnx")
+sklearn_logreg = "test_models/logreg_iris.onnx"
+sklearn_logreg_double = "test_models/logreg_iris_double.onnx"
+sklearn_logreg_infer = "test_models/logreg_iris_infertype.onnx"
 
 @pytest.fixture
 def iris_dataset():

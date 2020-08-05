@@ -1,5 +1,5 @@
 # Machine Learning is Natural Experiment
-**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[References](#references)**
+**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)**
 <details>
 <summary><strong>Table of Contents</strong></summary>
 
@@ -11,6 +11,7 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Usage](#usage)
+  - [Futher Examples](#further-examples)
 - [Versioning](#versioning)
 - [Contributing](#contributing)
 - [Citation](#citation)
@@ -90,6 +91,10 @@ estimator.firststage_summary() # Print summary of first stage results
 estimator.coef # Array of second-stage estimated coefficients
 estimator.varcov # Variance covariance matrix
 ```
+
+## Further examples
+- [Sklearn: model training, conversion, data generation, and estimation](https://github.com/factoryofthesun/mlisne/blob/master/examples/Sklearn_Iris_Conversion_Simulation_and_Estimation.ipynb)
+
 # Versioning 
 
 # Contributing

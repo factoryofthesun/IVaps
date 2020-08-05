@@ -18,7 +18,7 @@ def generate_iris_data():
     Treatment assignment D: follows Z 75% of the time
     Y = 1 + N(5, 1)*D + N(1,1)*QPS + N(0,1)"""
 
-    sklearn_logreg = str(Path(__file__).resolve().parents[1] / "examples" / "models" / "logreg_iris.onnx")
+    sklearn_logreg = str(Path(__file__).resolve().parents[1] / "models" / "iris_logreg.onnx")
     iris = load_iris()
     X = iris.data
 
@@ -50,7 +50,7 @@ def generate_iris_data():
     x_cols = [f'X_{i}' for i in range(X.shape[1])]
     pd_cols = ['Y', 'Z', 'D'] + x_cols + ['QPS']
     pd_dat = pd.DataFrame(data=data, columns=pd_cols)
-    pd_dat.to_csv("data/iris_data.csv", index=False)
+    pd_dat.to_csv("iris_data.csv", index=False)
 
 if __name__ == "__main__":
     generate_iris_data()

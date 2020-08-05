@@ -196,6 +196,18 @@ class TreatmentIVEstimator(BaseEstimator):
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
         return self.__firststage
+
+    def firststage_summary(self):
+        """Print summary of model first stage results"""
+        fs_res = self.firststage
+        x = PrettyTable()
+        x.field_names = ["", "Parameter", "Std. Err", "T-Stat", "P-Value", "Lower CI", "Upper CI"]
+        coef_list = ['const', 'ML Recommendation', 'QPS']
+        for i in range(len(coef_list)):
+            row = [coef_list[i], round(fs_res['coef'][i], 4), round(fs_res['std_error'][i], 4), round(fs_res['tstat'][i], 4), round(fs_res['p'][i], 4), round(fs_res['lowerci'][i], 4), round(fs_res['upperci'][i], 4)]
+            x.add_row(row)
+        print(x)
+
     def _fit_firststage(self, X, D, single_nondegen):
         """Computes post-estimation attributes for first stage regression if not called yet.
         Returns dictionary of first-stage attributes.
@@ -230,7 +242,7 @@ class TreatmentIVEstimator(BaseEstimator):
         fs_out['tstat'] = fs_tstat
         fs_out['p'] = fs_p
         fs_out['upperci'] = fs_upperci
-        fs_out['loweri'] = fs_lowerci
+        fs_out['lowerci'] = fs_lowerci
         fs_out['ci'] = np.stack((fs_lowerci, fs_upperci), axis=1)
         fs_out['tss'] = fs_tss
         fs_out['r2'] = fs_r2

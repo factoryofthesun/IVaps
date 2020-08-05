@@ -22,7 +22,7 @@ from mlisne.dataset import IVEstimatorDataset
 #   - input_type: 1 for single np.ndarray ONNX input, 2 for inputs split by continuous and discrete inputs
 
 # Output: p^s(X_i; delta) (scalar within [0,1])
-def _computeQPS(X_ci: np.ndarray, types: Tuple[np.dtype, np.dtype], S: int, delta: int, mu: float, sigma: float, sess: rt.InferenceSession,
+def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int, mu: float, sigma: float, sess: rt.InferenceSession,
                 input_type: int, X_di: np.ndarray = None, order: Sequence[int] = None):
     p_c = len(X_ci) # Number of continuous variables
     delta_vec = np.array([delta] * p_c)
@@ -80,9 +80,17 @@ def _computeQPS(X_ci: np.ndarray, types: Tuple[np.dtype, np.dtype], S: int, delt
 
 # Returns: np array of estimated QPS (nx1)
 def estimate_qps(X: IVEstimatorDataset, S: int, delta: int, ML_onnx: str, seed: int = None,
-                 types: Tuple[np.dtype, np.dtype] = (np.float32, np.float32), input_type: int = 1, order: Sequence[int] = None):
+                 types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1, order: Sequence[int] = None):
     X_c = X.X_c
     X_d = X.X_d
+
+    # If types not given, then infer from data
+    types = list(types)
+    if types[0] is None:
+        types[0] = X.X_c.dtype
+    if types[1] is None:
+        if X_d is not None:
+            types[1] = X.X_d.dtype
 
     # === Standardize continuous variables ===
     # Formula: (X_ik - u_k)/o_k; k represents a continuous variable

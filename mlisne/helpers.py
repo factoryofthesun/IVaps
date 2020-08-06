@@ -14,7 +14,8 @@ from mlisne.dataset import IVEstimatorDataset
 def check_is_fitted(estimator):
     return
 
-def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: int = 1, **kwargs) -> bool:
+def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: int = 1,
+                    input_names: Tuple[str, str] = ("input",), **kwargs) -> bool:
     """Convenience wrapper to quickly convert and save ONNX model with expected input/output settings
 
     Arguments
@@ -24,6 +25,7 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
     path: string path to save ONNX model
     framework: one of the currently implemented frameworks {"sklearn", "pytorch"}
     input_type: 1 if single array input, 2 if model takes continuous and discrete values separately
+    input_names: tuple of input names for later ONNX inference
     **kwargs: keyword arguments to be passed into mltools conversion function
 
     Returns: Boolean flag indicating successful conversion
@@ -31,12 +33,13 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
     if framework == "sklearn":
         if input_type == 1:
             tensortype = _guess_numpy_type(dummy_input.dtype)
-            initial_type = [('input', tensortype([None, len(dummy_input)]))]
+            initial_type = [(input_names[0], tensortype([None, len(dummy_input)]))]
         elif input_type == 2:
-            c_tensortype = _guess_numpy_type(dummy_input[0].dtype)
-            d_tensortype = _guess_numpy_type(dummy_input[1].dtype)
-            initial_type = [('c_inputs', c_tensortype([None, len(dummy_input[0])])),
-                            ('d_inputs', d_tensortype([None, len(dummy_input[1])]))]
+            tensortype_1 = _guess_numpy_type(dummy_input[0].dtype)
+            tensortype_2 = _guess_numpy_type(dummy_input[1].dtype)
+
+            initial_type = [(input_names[0], tensortype_1([None, len(dummy_input[0])])),
+                            (input_names[1], tensortype_2([None, len(dummy_input[1])]))]
         else:
             raise ValueError("input_type must be either 1 or 2")
         onx = convert_sklearn(model, initial_types=initial_type, **kwargs)
@@ -45,11 +48,11 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
         return True
     if framework == "pytorch":
         if input_type == 1:
-            torch.onnx.export(model, dummy_input, path, input_names=['input'], output_names=['output_probability'],
-                              dynamic_axes={'input':{0:'N'},'output_probability':{0:'N'}})
+            torch.onnx.export(model, dummy_input, path, input_names=[input_names[0]], output_names=['output_probability'],
+                              dynamic_axes={'input':{0:'N'},'output_probability':{0:'N'}}, **kwargs)
         elif input_type == 2:
-            torch.onnx.export(model, dummy_input, path, input_names=['c_inputs', 'd_inputs'], output_names=['output_probability'],
-                              dynamic_axes={'c_inputs':{0:'N'}, 'd_inputs':{0:'N'}, 'output_probability':{0:'N'}})
+            torch.onnx.export(model, dummy_input, path, input_names=list(input_names), output_names=['output_probability'],
+                              dynamic_axes={'c_inputs':{0:'N'}, 'd_inputs':{0:'N'}, 'output_probability':{0:'N'}}, **kwargs)
         else:
             raise ValueError("input_type must be either 1 or 2")
         return True

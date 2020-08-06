@@ -65,7 +65,7 @@ class IVEstimatorDataset(BaseEstimatorDataset):
                         X_d: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None) -> None:
         """
         If `data` is given, then the remaining arguments are expected to be indices of the relevant variables.
-            Any missing indices will be inferred from the expected column order in `data`: [Y, Z, D, X_d, X_c].
+            Any missing indices will be inferred from the expected column order in `data`: [Y, Z, D, X_c, X_d].
             If neither X_c nor X_d are given, then the covariates are assumed to be all continuous.
         Otherwise, the remaining arguments are expected to be data objects for overwriting specific variables.
         """

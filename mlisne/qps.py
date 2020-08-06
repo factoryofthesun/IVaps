@@ -23,7 +23,7 @@ from mlisne.dataset import IVEstimatorDataset
 
 # Output: p^s(X_i; delta) (scalar within [0,1])
 def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int, mu: float, sigma: float, sess: rt.InferenceSession,
-                input_type: int, X_di: np.ndarray = None, order: Sequence[int] = None):
+                input_type: int, input_names: Tuple[str, str], X_di: np.ndarray = None):
     p_c = len(X_ci) # Number of continuous variables
     delta_vec = np.array([delta] * p_c)
     standard_draws = np.random.normal(size=(S,p_c)) # S draws from standard normal
@@ -49,7 +49,7 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int,
         if input_type == 2:
             disc_inputs = X_d_long.astype(disc_type)
             cts_inputs = destandard_draws.astype(cts_type)
-            ml_out = sess.run([label_name], {"c_inputs": cts_inputs, "d_inputs": disc_inputs})[0]
+            ml_out = sess.run([label_name], {input_names[0]: cts_inputs, input_names[1]: disc_inputs})[0]
         else:
             # If input type = 1, then coerce all to the continuous type
             inputs = np.append(destandard_draws, X_d_long, axis=1).astype(cts_type)
@@ -79,8 +79,9 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int,
 #           ** Only applies when both continuous and discrete vars are in input and input_type = 1
 
 # Returns: np array of estimated QPS (nx1)
-def estimate_qps(X: IVEstimatorDataset, S: int, delta: int, ML_onnx: str, seed: int = None,
-                 types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1, order: Sequence[int] = None):
+def estimate_qps(X: IVEstimatorDataset, S: float, delta: int, ML_onnx: str, seed: int = None,
+                 types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1,
+                 input_names: Tuple[str, str]=("c_inputs", "d_inputs")):
     X_c = X.X_c
     X_d = X.X_d
 
@@ -106,8 +107,8 @@ def estimate_qps(X: IVEstimatorDataset, S: int, delta: int, ML_onnx: str, seed: 
     QPS_vec = []
     for i in range(X_c.shape[0]):
         if X_d is None:
-            QPS_vec.append(_computeQPS(X_c[i,], types, S, delta, mu, sigma, sess, input_type, order=order)) # Compute QPS for each individual i
+            QPS_vec.append(_computeQPS(X_c[i,], types, S, delta, mu, sigma, sess, input_type, input_names=input_names)) # Compute QPS for each individual i
         else:
-            QPS_vec.append(_computeQPS(X_c[i,], types, S, delta, mu, sigma, sess, X_di = X_d[i,], input_type=input_type, order=order)) # Compute QPS for each individual i
+            QPS_vec.append(_computeQPS(X_c[i,], types, S, delta, mu, sigma, sess, X_di = X_d[i,], input_type=input_type, input_names=input_names)) # Compute QPS for each individual i
     QPS_vec = np.array(QPS_vec)
     return QPS_vec

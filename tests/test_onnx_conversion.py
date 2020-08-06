@@ -113,8 +113,8 @@ def churn_data():
     return churn
 
 def test_sklearn_conversion(iris_model, iris_data):
-    X_dummy = np.array(iris_data.loc[0, ['X_0', 'X_1', 'X_2', 'X_3']])
-    X_inp = np.array(iris_data[['X_0', 'X_1', 'X_2', 'X_3']])
+    X_dummy = np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']])
+    X_inp = np.array(iris_data[['X1', 'X2', 'X3', 'X4']])
     f = "test_models/iris_test.onnx"
     convert_to_onnx(iris_model, X_dummy, f, "sklearn")
 
@@ -153,5 +153,35 @@ def test_torch_conversion(churn_model, churn_data):
         torch_preds = churn_model(tot_tensor).numpy()
     sess = rt.InferenceSession(f)
     onnx_preds = sess.run(["output_probability"], {"input": tot_data.astype(np.float32)})[0]
+
+    np.testing.assert_array_almost_equal(torch_preds, onnx_preds, decimal=5)
+
+def test_torch_cat_conversion(churn_cat_model, churn_data):
+    categorical_cols = ['Geography', 'Gender', 'HasCrCard', 'IsActiveMember']
+    numerical_cols = ['CreditScore', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 'EstimatedSalary']
+    for category in categorical_cols:
+        churn_data[category] = churn_data[category].astype('category')
+    cat = []
+    for c in categorical_cols:
+        cat.append(churn_data[c].cat.codes.values)
+    cat_data = np.stack(cat, 1)
+    num_data = np.array(churn_data[numerical_cols])
+
+    cat_tensor = torch.tensor(cat_data).long()
+    num_tensor = torch.tensor(num_data).float()
+
+    cat_dummy = cat_tensor[0,None]
+    num_dummy = num_tensor[0,None]
+
+    print(cat_dummy.size(), num_dummy.size())
+    f = "test_models/churn_cat_test.onnx"
+    convert_to_onnx(churn_cat_model, (cat_dummy, num_dummy), f, "pytorch", input_type=2, input_names=("d_inputs", "c_inputs"))
+
+    # Test inference
+    with torch.no_grad():
+        torch_preds = churn_cat_model(cat_tensor, num_tensor).numpy()
+    sess = rt.InferenceSession(f)
+    onnx_preds = sess.run(["output_probability"], {"c_inputs": num_data.astype(np.float32),
+                                                   "d_inputs": cat_data.astype(np.int64)})[0]
 
     np.testing.assert_array_almost_equal(torch_preds, onnx_preds, decimal=5)

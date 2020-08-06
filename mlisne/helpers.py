@@ -4,10 +4,8 @@ import onnxruntime as rt
 import warnings
 import numpy as np
 import pandas as pd
-import torch
-from onnxmltools import convert_keras
-from skl2onnx import convert_sklearn, to_onnx
-from skl2onnx.common.data_types import FloatTensorType, DoubleTensorType, Int64TensorType
+from onnxmltools import convert_keras, convert_sklearn
+from onnxmltools.convert.common.data_types import FloatTensorType, DoubleTensorType, Int64TensorType
 
 from mlisne.dataset import IVEstimatorDataset
 
@@ -47,11 +45,12 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
             f.write(onx.SerializeToString())
         return True
     if framework == "pytorch":
+        from torch.onnx import export
         if input_type == 1:
-            torch.onnx.export(model, dummy_input, path, input_names=[input_names[0]], output_names=['output_probability'],
+            export(model, dummy_input, path, input_names=[input_names[0]], output_names=['output_probability'],
                               dynamic_axes={'input':{0:'N'},'output_probability':{0:'N'}}, **kwargs)
         elif input_type == 2:
-            torch.onnx.export(model, dummy_input, path, input_names=list(input_names), output_names=['output_probability'],
+            export(model, dummy_input, path, input_names=list(input_names), output_names=['output_probability'],
                               dynamic_axes={'c_inputs':{0:'N'}, 'd_inputs':{0:'N'}, 'output_probability':{0:'N'}}, **kwargs)
         else:
             raise ValueError("input_type must be either 1 or 2")

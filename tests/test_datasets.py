@@ -57,16 +57,16 @@ def test_df_index_initialization():
     assert np.array_equal(dt.X_d, np.array([2]*20))
 
 def test_str_initialization():
-    sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "sample_data1.csv"
-    C = range(8,13)
-    dt = IVEstimatorDataset(sample_data_path, X_c = C, Z = 2, D = 1)
+    sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "iris_data.csv"
+    C = range(5,9)
+    dt = IVEstimatorDataset(sample_data_path, Y=9, Z = 3, D = 4, X_c = C)
 
     validate_df = pd.read_csv(sample_data_path)
     assert all(dt.Y == np.array(validate_df['Y']))
     assert all(dt.Z == np.array(validate_df['Z']))
     assert all(dt.D == np.array(validate_df["D"]))
     assert np.array_equal(dt.X_c, np.array(validate_df.iloc[:,C]))
-    assert np.array_equal(dt.X_d, np.array(validate_df.iloc[:,3:8]))
+    assert np.array_equal(dt.X_d, np.array(validate_df.iloc[:,0:3]))
 
 def test_overwrite():
     cts_np = np.array(["Y", "Z", "D", 1, 2, 3, 4, 5])

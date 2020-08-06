@@ -35,18 +35,18 @@ def iris_dataset_discrete():
     return dt
 
 def test_estimate_nodiscrete_skl(iris_dataset):
-    qps = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg)
+    qps = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, types=(np.float32,None))
     print(qps)
     assert qps.shape[0] == iris_dataset.Y.shape[0]
 
 def test_seed_skl(iris_dataset):
     seed = np.random.choice(range(100))
-    qps1 = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed)
-    qps2 = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed)
+    qps1 = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
+    qps2 = estimate_qps(iris_dataset, S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
     assert np.array_equal(qps1, qps2)
 
 def test_estimate_withdiscrete_skl(iris_dataset_discrete):
-    qps = estimate_qps(iris_dataset_discrete, S=100, delta=0.8, ML_onnx=sklearn_logreg)
+    qps = estimate_qps(iris_dataset_discrete, S=100, delta=0.8, ML_onnx=sklearn_logreg, types=(np.float32,None))
     print(qps)
     assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]
 
@@ -56,6 +56,8 @@ def test_estimate_double_skl(iris_dataset_discrete):
     assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]
 
 def test_estimate_infer_skl(iris_dataset_discrete):
+    iris_dataset_discrete.X_c = iris_dataset_discrete.X_c.astype(np.float32)
+    iris_dataset_discrete.X_d = iris_dataset_discrete.X_d.astype(np.float32)
     qps = estimate_qps(iris_dataset_discrete, S=100, delta=0.8, ML_onnx=sklearn_logreg_infer)
     print(qps)
     assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]

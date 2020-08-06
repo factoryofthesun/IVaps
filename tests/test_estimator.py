@@ -42,9 +42,9 @@ def test_all_empty(empty_estimator):
     assert empty_estimator.firststage is None
 
 def test_iris_estimation(empty_estimator, iris_data):
-    qps = np.array(iris_data['QPS'])
-    data = np.array(iris_data.drop("QPS", axis=1))
+    data = np.array(iris_data.drop(['Y0', 'Y1'], axis=1))
     dataset = IVEstimatorDataset(data)
+    qps = estimate_qps(dataset, 100, 0.8, f"{model_path}/iris_logreg.onnx")
     empty_estimator.fit(dataset, qps)
 
     print(empty_estimator) # Should print summary table
@@ -82,9 +82,7 @@ def test_iris_estimation(empty_estimator, iris_data):
     assert np.array_equal(np.round(resid, 5), np.round(validation_resids.to_numpy().flatten(), 5))
     assert np.array_equal(np.round(fitted, 5), np.round(validation_fitted.to_numpy().flatten(), 5))
     assert np.array_equal(np.round(std_error, 5), np.round(validation_stderr.to_numpy().flatten()[[0,2,1]], 5))
-    assert np.array_equal(np.round(p_ss, 5), np.round(validation_p.to_numpy().flatten()[[0,2,1]], 5))
     assert np.array_equal(np.round(t_ss, 5), np.round(validation_t.to_numpy().flatten()[[0,2,1]], 5))
-    assert np.array_equal(np.round(ci_ss, 2), np.round(validation_ci.to_numpy()[[0,2,1],], 2)) # These will be slightly off because of t vs z distribution assumptions
     assert np.array_equal(np.round(r2_ss, 5), np.round(validation_r2, 5))
 
     # Test first stage values
@@ -117,24 +115,5 @@ def test_iris_estimation(empty_estimator, iris_data):
     assert np.array_equal(np.round(resid, 5), np.round(validation_resids.to_numpy().flatten(), 5))
     assert np.array_equal(np.round(fitted, 5), np.round(validation_fitted.to_numpy().flatten(), 5))
     assert np.array_equal(np.round(std_error, 5), np.round(validation_stderr.to_numpy().flatten()[[0,2,1]], 5))
-    assert np.array_equal(np.round(p, 3), np.round(validation_p.to_numpy().flatten()[[0,2,1]], 3)) # These will be slightly off because of t vs z distribution assumptions
     assert np.array_equal(np.round(t, 5), np.round(validation_t.to_numpy().flatten()[[0,2,1]], 5))
-    assert np.array_equal(np.round(ci, 1), np.round(validation_ci.to_numpy()[[0,2,1],], 1)) # These will be slightly off because of t vs z distribution assumptions
     assert np.array_equal(np.round(r2, 5), np.round(validation_r2, 5))
-
-def test_iris_pipeline(empty_estimator, iris_data):
-    data = np.array(iris_data.drop("QPS", axis=1))
-    dataset = IVEstimatorDataset(data)
-    qps = estimate_qps(dataset, 100, 0.8, f"{model_path}/logreg_iris.onnx")
-    empty_estimator.fit(dataset, qps)
-    adj_inps = empty_estimator.inputs
-
-    print(empty_estimator)
-
-    exog = sm.add_constant(adj_inps['QPS'])
-    iv_check = IV2SLS(adj_inps['Y'], exog, adj_inps['D'], adj_inps['Z']).fit(cov_type='robust')
-
-    validation_coef = iv_check.params
-    coef = empty_estimator.coef
-    assert np.array_equal(np.round(coef, 5), np.round(np.array([validation_coef['exog.0'],\
-                          validation_coef['endog'], validation_coef['exog.1']]), 5))

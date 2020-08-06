@@ -53,8 +53,6 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int,
         else:
             # If input type = 1, then coerce all to the continuous type
             inputs = np.append(destandard_draws, X_d_long, axis=1).astype(cts_type)
-            if order is not None:
-                inputs = inputs[:, order] # Set input order
             ml_out = sess.run([label_name], {input_name: inputs})[0]
 
     # Account for case in which output probabilities are in dictionary of class labels
@@ -75,8 +73,6 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int,
 #   - ML_onnx: path to ML ONNX object that can take a 2d np array of inputs
 #   - seed: random seed
 #   - input_type: "single" for single ONNX input, "double" for ONNX input that separates discrete and continuous inputs
-#   - order: indices to reorder the ONNX inputs -- otherwise will default to [continuous vars], [discrete vars]
-#           ** Only applies when both continuous and discrete vars are in input and input_type = 1
 
 # Returns: np array of estimated QPS (nx1)
 def estimate_qps(X: IVEstimatorDataset, S: float, delta: int, ML_onnx: str, seed: int = None,

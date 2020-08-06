@@ -47,12 +47,13 @@ The mlisne package is an implementation of the treatment effect estimation metho
 
 ### Supported ML Frameworks
 
-The QPS estimation function `estimate_qps` only accepts models in the ONNX framework in order to maintain the framework-agnostic implementation. The module provides a `convert_to_onnx` function that currently supports conversion from the following frameworks
+The QPS estimation function `estimate_qps` only accepts models in the ONNX framework in order to maintain the framework-agnostic implementation. The module provides a `convert_to_onnx` function that currently supports conversion from the following frameworks:
 
 - [Sklearn](https://github.com/onnx/sklearn-onnx/)
 - [Pytorch](https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html)
 
 For conversion functions for other frameworks, please refer to the [onnxmltools repository](https://github.com/onnx/onnxmltools).
+Please note that `convert_to_onnx` requires that the relevant framework packages are installed.
 
 # Installation 
 This package is still in its development phase, but you can compile the package from source

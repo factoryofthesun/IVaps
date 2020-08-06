@@ -11,6 +11,9 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Usage](#usage)
+  - [Data Loading](#data-loading)
+  - [QPS Estimation](#qps-estimation)
+  - [IV Estimation](#iv-estimation)
   - [Futher Examples](#further-examples)
 - [Versioning](#versioning)
 - [Contributing](#contributing)
@@ -48,10 +51,10 @@ The QPS estimation function `estimate_qps` only accepts models in the ONNX frame
 For conversion functions for other frameworks, please refer to the [onnxmltools repository](https://github.com/onnx/onnxmltools).
 
 # Installation 
-You can install OBP using Python's package manager `pip`.
+You can install mlisne using Python's package manager `pip`.
 
 ```
-pip install obp
+pip install mlisne
 ```
 
 You can install OBP from source.
@@ -90,6 +93,89 @@ estimator.firststage_summary() # Print summary of first stage results
 
 estimator.coef # Array of second-stage estimated coefficients
 estimator.varcov # Variance covariance matrix
+```
+In general the pipeline has three main steps: loading, QPS estimation, and IV estimation. 
+
+## Data Loading
+The IVEstimatorDataset class is the main data loader for the rest of the pipeline. It splits the data into individual arrays of the outcome `Y`, treatment assignment `D`, algorithmic recommendation `Z`, continuous inputs `X_c`, and discrete inputs `X_d`. The module can be initialized by passing in a pandas dataframe or numpy array with associated indices, or the variables can be individually assigned. 
+
+```python
+import pandas as pd
+import numpy as np
+from mlisne.dataset import IVEstimatorDataset
+
+data = pd.read_csv("path_to_your_historical_data.csv")
+
+# We can initialize the dataset by passing in the entire dataframe with indicator indices
+iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2, X_c=range(3,6), X_d=range(6,9))
+
+# We can also load the data post-initialization
+iv_data = IVEstimatorDataset()
+iv_data.load_data(Y=data['Y'], Z=data['Z'], D=data['D'], X_c=data.iloc[:,3:6], X_d=data.iloc[:,6:9])
+
+# Indices that are not passed will be inferred from the remaining columns
+iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2, X_c=range(3,6)) 
+iv_data.X_d # data.iloc[:,6:9]
+
+# If neither X_c nor X_d indices are given, then the input data is assumed to be all continuous
+iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2) 
+# "UserWarning: Neither continuous nor discrete indices were explicitly given. We will assume all covariates in data are continuous."
+
+# We can also overwrite individual variables with the `load_data` function
+iv_data.load_data(X_c = data[["new", "continuous", "cols"]])
+```
+## QPS Estimation 
+The main QPS estimation function is `estimate_qps`. The primary inputs are `X` an IVEstimatorDataset, `S` the number of draws per estimate, `delta` the radius of the ball, and `ML_onnx` the string path to a saved ONNX model for inference. Please refer to the documentation for the full list of keyword arguments that can be passed. 
+```python
+import pandas as pd
+import numpy as np
+from mlisne.qps import estimate_qps
+
+S = 100
+delta = 0.8
+seed = 1 
+ml_path = "path_to_your_onnx_model.onnx"
+
+# `seed` sets np.random.seed 
+qps = estimate_qps(iv_data, S, delta, ml_path, seed)
+qps2 = estimate_qps(iv_data, S, delta, ml_path, seed)
+assert qps == qps2
+
+# We can specify np types for coercion if the ONNX model expects different types 
+qps = estimate_qps(iv_data, S, delta, ml_path, types=(np.float64,))
+
+# If the ONNX model takes separate continuous and discrete inputs, then we need to specify the input type and input names
+qps = estimate_qps(iv_data, S, delta, ml_path, input_type=2, input_names=("c_inputs", "d_inputs"))
+```
+## IV Estimation
+Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. The TreatmentIVEstimator applies the 2SLS method to fit the model. Post-estimation diagnostics and statistics are accessible directly from the estimator. Please see the documentation for the full list of available statistics.
+```python
+import pandas as pd
+import numpy as np
+from mlisne.estimator import TreatmentIVEstimator
+
+est = TreatmentIVEstimator()
+est.fit(iv_data, qps)
+print(est) 
+
+# If we know that ML takes only one nondegenerate value (strictly between 0 and 1) in the sample, then the constant term will need to be removed
+est.fit(iv_data, qps, single_nondegen=True)
+
+# Standard statistics 
+est.coef
+est.std_err
+est.fitted
+
+# Post-estimation
+postest = est.postest
+postest['rss']
+postest['r2']
+
+# First stage statistics
+fs = est.firststage
+fs['coef']
+fs['r2']
+fs['std_error']
 ```
 
 ## Further examples

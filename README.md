@@ -34,8 +34,12 @@ Today’s society increasingly resorts to machine learning (“AI”) and other 
 All of the above, seemingly diverse examples share a common trait: An algorithm makes decisions based only on observable input variables the data-generating algorithm uses. Conditional on the observable variables, therefore, algorithmic treatment decisions are (quasi-)randomly assigned. This property makes algorithm-based treatment decisions **an instrumental variable we can use for measuring the causal effect of the final treatment assignment**. The algorithm-based instrument may produce regression-discontinuity-style local variation (e.g. machine judges), stratified randomization (e.g. several bandit and reinforcement leaning algorithms), or mixes of the two.
 
 ## Framework
-
-insert images here...
+<img src="/images/ml_natural_experiment_diagram.PNG" width="550" height="250"/>
+<img src="/images/framework_1.PNG" width="500" height="300"/>
+<img src="/images/framework_2.PNG" width="500" height="300"/>
+<img src="/images/framework_3.PNG" width="500" height="300"/>
+<img src="/images/qps_chart.PNG" width="350" height="250"/>
+<img src="/images/qps_estimation.PNG" width="500" height="300"/>
 
 ## MLisNE Package
 
@@ -51,13 +55,7 @@ The QPS estimation function `estimate_qps` only accepts models in the ONNX frame
 For conversion functions for other frameworks, please refer to the [onnxmltools repository](https://github.com/onnx/onnxmltools).
 
 # Installation 
-You can install mlisne using Python's package manager `pip`.
-
-```
-pip install mlisne
-```
-
-You can install OBP from source.
+This package is still in its development phase, but you can compile the package from source
 ```bash
 git clone https://github.com/factoryofthesun/mlisne
 cd mlisne
@@ -124,6 +122,7 @@ iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2)
 # We can also overwrite individual variables with the `load_data` function
 iv_data.load_data(X_c = data[["new", "continuous", "cols"]])
 ```
+
 ## QPS Estimation 
 The main QPS estimation function is `estimate_qps`. The primary inputs are `X` an IVEstimatorDataset, `S` the number of draws per estimate, `delta` the radius of the ball, and `ML_onnx` the string path to a saved ONNX model for inference. Please refer to the documentation for the full list of keyword arguments that can be passed. 
 ```python
@@ -147,6 +146,7 @@ qps = estimate_qps(iv_data, S, delta, ml_path, types=(np.float64,))
 # If the ONNX model takes separate continuous and discrete inputs, then we need to specify the input type and input names
 qps = estimate_qps(iv_data, S, delta, ml_path, input_type=2, input_names=("c_inputs", "d_inputs"))
 ```
+
 ## IV Estimation
 Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. The TreatmentIVEstimator applies the 2SLS method to fit the model. Post-estimation diagnostics and statistics are accessible directly from the estimator. Please see the documentation for the full list of available statistics.
 ```python
@@ -180,6 +180,7 @@ fs['std_error']
 
 ## Further examples
 - [Sklearn: model training, conversion, data generation, and estimation](https://github.com/factoryofthesun/mlisne/blob/master/examples/Sklearn_Iris_Conversion_Simulation_and_Estimation.ipynb)
+- [Pytorch: neural network with categorical embeddings](https://github.com/factoryofthesun/mlisne/blob/master/examples/Pytorch_Churn_Categorical_Embeddings.ipynb)
 
 # Versioning 
 

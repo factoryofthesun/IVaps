@@ -1,5 +1,4 @@
 numpy>=1.18.5
-numpy-base>=1.18.5
 onnx>=1.7.0
 onnxconverter-common>=1.7.0
 onnxmltools>=1.7.0
@@ -7,4 +6,3 @@ onnxruntime-gpu>=1.4.0
 pandas>=1.0.5
 prettytable>=0.7.2
 pydantic>=1.6.1
-python>=3.5,<3.8

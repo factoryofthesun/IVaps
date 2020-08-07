@@ -115,7 +115,7 @@ def churn_data():
 def test_sklearn_conversion(iris_model, iris_data):
     X_dummy = np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']])
     X_inp = np.array(iris_data[['X1', 'X2', 'X3', 'X4']])
-    f = "test_models/iris_test.onnx"
+    f = os.path.join(os.path.dirname(__file__), "test_models/iris_test.onnx")
     convert_to_onnx(iris_model, X_dummy, f, "sklearn")
 
     # Test inference
@@ -145,7 +145,7 @@ def test_torch_conversion(churn_model, churn_data):
     tot_tensor = torch.cat((cat_tensor, num_tensor), 1).float()
     X_dummy = tot_tensor[0,None]
 
-    f = "test_models/churn_test.onnx"
+    f = os.path.join(os.path.dirname(__file__), "test_models/churn_test.onnx")
     convert_to_onnx(churn_model, X_dummy, f, "pytorch")
 
     # Test inference
@@ -174,7 +174,7 @@ def test_torch_cat_conversion(churn_cat_model, churn_data):
     num_dummy = num_tensor[0,None]
 
     print(cat_dummy.size(), num_dummy.size())
-    f = "test_models/churn_cat_test.onnx"
+    f = os.path.join(os.path.dirname(__file__), "test_models/churn_cat_test.onnx")
     convert_to_onnx(churn_cat_model, (cat_dummy, num_dummy), f, "pytorch", input_type=2, input_names=("d_inputs", "c_inputs"))
 
     # Test inference

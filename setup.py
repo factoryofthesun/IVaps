@@ -1,6 +1,6 @@
 from mlisne.__init__ import __version__
 from setuptools import setup, find_packages
-from os import path
+from os import path, getcwd
 import sys
 
 here = path.abspath(path.dirname(__file__))
@@ -35,8 +35,6 @@ setup(
     license="Apache License",
     packages=find_packages(exclude=["examples", "tests", "docs"]),
     classifiers=[
-        "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Intended Audience :: Science/Research",
         'Programming Language :: Python',
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.5',
@@ -44,4 +42,5 @@ setup(
         'Programming Language :: Python :: 3.7',
         "License :: OSI Approved :: Apache Software License",
     ],
+    python_requires='>=3.5, <3.8',
 )

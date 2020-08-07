@@ -62,7 +62,12 @@ git clone https://github.com/factoryofthesun/mlisne
 cd mlisne
 python setup.py install
 ```
-
+To install in development mode
+```bash
+git clone https://github.com/factoryofthesun/mlisne
+cd mlisne
+python setup.py develop
+```
 # Requirements
 
 # Usage

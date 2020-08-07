@@ -60,13 +60,13 @@ This package is still in its development phase, but you can compile the package 
 ```bash
 git clone https://github.com/factoryofthesun/mlisne
 cd mlisne
-python setup.py install
+pip install .
 ```
 To install in development mode
 ```bash
 git clone https://github.com/factoryofthesun/mlisne
 cd mlisne
-python setup.py develop
+pip install -e
 ```
 # Requirements
 

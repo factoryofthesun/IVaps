@@ -66,7 +66,7 @@ To install in development mode
 ```bash
 git clone https://github.com/factoryofthesun/mlisne
 cd mlisne
-pip install -e
+pip install -e ./
 ```
 # Requirements
 

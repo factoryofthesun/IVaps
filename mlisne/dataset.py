@@ -45,7 +45,9 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         Data object of discrete variables (int)
 
     WARNING: if both C and X_d are not given, then all covariates are assumed to be continuous!
+
     """
+
     data: InitVar[Union[str, np.ndarray, pd.DataFrame]] = None
     Y: Union[int, np.ndarray, pd.Series, Sequence] = None
     Z: Union[int, np.ndarray, pd.Series, Sequence] = None
@@ -69,6 +71,7 @@ class IVEstimatorDataset(BaseEstimatorDataset):
             If neither X_c nor X_d are given, then the covariates are assumed to be all continuous.
         Otherwise, the remaining arguments are expected to be data objects for overwriting specific variables.
         """
+        
         if data is not None:
             # TODO: Raise error if data does not have minimum number of columns
             if isinstance(data, str) or isinstance(data, os.PathLike):

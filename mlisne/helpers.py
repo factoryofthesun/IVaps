@@ -16,18 +16,23 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
                     input_names: Tuple[str, str] = ("input",), **kwargs) -> bool:
     """Convenience wrapper to quickly convert and save ONNX model with expected input/output settings
 
-    Arguments
+    Parameters
     ---------
     model: fitted model object
-    dummy_input: 1D input array or 2-tuple of continuous and discrete input arrays; for type inference
+    dummy_input: 1D input array or 2-tuple of continuous and discrete input arrays
+        Used for type inference and passed into downstream conversion functions
     path: string path to save ONNX model
     framework: one of the currently implemented frameworks {"sklearn", "pytorch"}
     input_type: 1 if single array input, 2 if model takes continuous and discrete values separately
     input_names: tuple of input names for later ONNX inference
     **kwargs: keyword arguments to be passed into mltools conversion function
 
-    Returns: Boolean flag indicating successful conversion
+    Returns
+    -----------
+    Boolean flag indicating successful conversion
+    
     """
+
     if framework == "sklearn":
         if input_type == 1:
             tensortype = _guess_numpy_type(dummy_input.dtype)
@@ -61,6 +66,8 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
         return False
 
 def _guess_numpy_type(data_type):
+    """Guess the ONNX tensortype from the given numpy dtype"""
+
     if data_type == np.float32:
         return FloatTensorType
     if data_type == np.float64:

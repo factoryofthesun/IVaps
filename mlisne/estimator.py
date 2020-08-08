@@ -15,6 +15,19 @@ from prettytable import PrettyTable
 from mlisne.dataset import IVEstimatorDataset
 
 class TreatmentIVEstimator(BaseEstimator):
+    """Class to estimate treatment effects using 2SLS method
+
+    The `fit` class method estimates the following equations
+
+    ..math::
+
+        D_i = \\gamma_0 + \\gamma_1 Z_i + \\gamma_2 p^s(X_i;\\delta) + v_i \\
+        Y_i = \\beta_0 + \\beta_1 D_i + \\beta_2 p^s(X_i;\\delta) + \\eps_i
+
+    :math:`\\beta_1` is our causal estimation of the treatment effect.
+
+    """
+    
     def __init__(self):
         self.__coef = None
         self.__varcov = None
@@ -23,21 +36,23 @@ class TreatmentIVEstimator(BaseEstimator):
         self.__fitted = None
         self.__fit = False
         self.__postest = None
-    def fit(self, data: IVEstimatorDataset, qps: np.ndarray, single_nondegen = False) -> None:
-        # ==== Compute 2SLS Estimator ====
-        # Estimates 2SLS regression of the form:
-        #   D = g0(1-I) + g1*Z + g2*QPS(X, delta) + v
-        #   Y = b0(1-I) + b1*D + b2*QPS(X, delta) + e
-        # Where I is an indicator for whether ML takes only one nondegenerate value in the sample (to avoid multicollinearity).
-        # Only observations where QPS %in% (0,1) are used in the estimation.
-        # Matrix forms
-        #   - W: [[1,...,1], [Z_1, ..., Z_n], [qps_1, ..., qps_n]] (3 x n)
-        #   - V: [[1,...,1], [D_1, ..., D_n], [qps_1, ..., qps_n]] (3 x n)
-        #   - Y: [Y_1, ..., Y_n] (n x 1)
-        #   - e_hat: diag([e_1, ..., e_n]) (n x n) (2nd stage residuals along diagonal)
-        # Formulas:
-        #   - beta_hat = (W x V')^-1 (W x Y)
-        #   - var_cov = (W x V')^-1 (W x e_hat^2 x W')(V x W')^-1
+    def fit(self, data: IVEstimatorDataset, qps: np.ndarray, single_nondegen: bool = False) -> None:
+        """Fit estimator
+
+        Parameters
+        -----------
+        data: IVEstimatorDataset
+            Dataset class loaded with Y, Z, D, and X
+        qps: array-like, shape(n_sample,)
+            Estimated quasi propensity scores for each observation
+        single_nondegen: Boolean
+            Indicator for whether the ML model takes on only 1 nondegenerate value in the sample
+
+        Returns
+        -----------
+        None
+
+        """
 
         Y = data.Y
         Z = data.Z
@@ -92,7 +107,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def coef(self):
-        # Returns: np array of estimated coefficients, if fitted
+        """Returns: np array of estimated coefficients, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -100,7 +115,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def varcov(self):
-        # Returns: variance-covariance matrix, if fitted
+        """Returns: variance-covariance matrix, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -108,7 +123,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def fitted(self):
-        # Returns: fitted values, if fitted
+        """Returns: fitted values, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -116,7 +131,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def resid(self):
-        # Returns: residuals, if fitted
+        """Returns: residuals, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -124,7 +139,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def tstat(self):
-        # Returns: count of fitted values, if fitted
+        """Returns: count of fitted values, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -132,7 +147,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def std_error(self):
-        # Returns: count of fitted values, if fitted
+        """Returns: count of fitted values, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -140,7 +155,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def p(self):
-        # Returns: count of fitted values, if fitted
+        """Returns: count of fitted values, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -148,7 +163,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def n_fit(self):
-        # Returns: count of fitted values, if fitted
+        """Returns: count of fitted values, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -156,7 +171,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def ci(self):
-        # Returns: Second stage coefficient CI, if fitted
+        """Returns: Second stage coefficient CI, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -164,7 +179,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def inputs(self):
-        # Returns: Second stage adjusted inputs, if fitted
+        """Returns: Second stage adjusted inputs, if fitted"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None

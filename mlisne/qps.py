@@ -22,8 +22,41 @@ from mlisne.dataset import IVEstimatorDataset
 #   - input_type: 1 for single np.ndarray ONNX input, 2 for inputs split by continuous and discrete inputs
 
 # Output: p^s(X_i; delta) (scalar within [0,1])
-def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int, mu: float, sigma: float, sess: rt.InferenceSession,
-                input_type: int, input_names: Tuple[str, str], X_di: np.ndarray = None):
+def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
+                sess: rt.InferenceSession, input_type: int, input_names: Tuple[str, str], X_di: np.ndarray = None):
+    """Compute QPS for a single row of data
+
+    Quasi-propensity score estimation involves taking draws :math:`X_c^1, \\ldots,X_c^S` from the uniform distribution on :math:`N(X_{ci}, \\delta)`, where :math:`N(X_{ci},\\delta)` is the :math:`p_c` dimensional ball centered at :math:`X_{ci}` with radius :math:`\\delta`.
+
+    :math:`X_c^1, \\ldots,X_c^S` are destandardized before passed for ML inference. The estimation equation is :math:`p^s(X_i;\\delta) = \\frac{1}{S} \sum_{s=1}^{S} ML(X_c^s, X_{di})`.
+
+    Parameters
+    -----------
+    X_ci: array-like, shape(n_continuous,)
+        1D vector of standardized continuous inputs
+    X_di: array-like, shape(n_discrete,), default: None
+        1D vector of discrete inputs
+    types: list-like, length(2)
+        Numpy dtypes for continuous and discrete data
+    S: int
+        Number of draws
+    delta: float
+        Radius of sampling ball
+    mu: array-like, shape(n_continuous,)
+        1D vector of means of continuous variables
+    sigma: array-like, shape(n_continuous,)
+        1D vector of standard deviations of continuous variables
+    sess: onnxruntime InferenceSession
+        Session for running inference on loaded ONNX model
+    input_type: 1 or 2
+        Whether the model takes continuous/discrete inputs together or separately
+
+    Returns
+    -----------
+    qps: float
+        Estimated qps for the observation row
+
+    """
     p_c = len(X_ci) # Number of continuous variables
     delta_vec = np.array([delta] * p_c)
     standard_draws = np.random.normal(size=(S,p_c)) # S draws from standard normal
@@ -78,6 +111,34 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: int,
 def estimate_qps(X: IVEstimatorDataset, S: float, delta: int, ML_onnx: str, seed: int = None,
                  types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1,
                  input_names: Tuple[str, str]=("c_inputs", "d_inputs")):
+    """Estimate QPS for given dataset and ONNX model
+
+    Parameters
+    -----------
+    X: IVEstimatorDataset
+        Dataset with loaded historical treatment data
+    S: int
+        Number of draws for each QPS estimation
+    delta: float
+        Radius of sampling ball
+    ML_onnx: str
+        String path to ONNX model
+    seed: int
+        Seed for sampling
+    types: list-like, length(2)
+        Numpy dtypes for continuous and discrete data
+    input_type: 1 or 2
+        Whether the model takes continuous/discrete inputs together or separately
+    input_names: tuple, length(2)
+        Names for input nodes of ONNX model
+
+    Returns
+    -----------
+    qps: array-like, shape(n_sample,)
+        Array of estimated QPS for each observation in sample
+
+    """
+    
     X_c = X.X_c
     X_d = X.X_d
 

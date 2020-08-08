@@ -14,6 +14,7 @@
   - [Data Loading](#data-loading)
   - [QPS Estimation](#qps-estimation)
   - [IV Estimation](#iv-estimation)
+  - [Model Conversion](#model-conversion)
   - [Futher Examples](#further-examples)
 - [Versioning](#versioning)
 - [Contributing](#contributing)
@@ -182,6 +183,34 @@ fs = est.firststage
 fs['coef']
 fs['r2']
 fs['std_error']
+```
+## Model Conversion
+The mlisne API offers an ONNX conversion function `convert_to_onnx` that generalizes the conversion process. The function requires a dummy input to infer the input dtype, allows for renaming of input nodes, and passes downstream any framework specific keyword arguments.
+```python
+import pandas as pd
+import numpy as np
+from sklearn.datasets import load_iris
+
+iris = load_iris()
+X, y = iris.data, iris.target
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y)
+clr = LogisticRegression()
+clr.fit(X_train, y_train)
+
+from mlisne.helpers import convert_to_onnx
+
+X_dummy = X[0,:]
+filename = "save_path_to_onnx.onnx"
+
+convert_to_onnx(model = model, dummy_input = X_dummy, path = filename, framework = "sklearn")
+
+# Set custom input node name and pass additional keyword arguments
+convert_to_onnx(model=model, dummy_input=X_dummy, path=filename, framework="sklearn", input_names=("input",),
+                target_opset=12, doc_string="Sklearn LogisticRegression model trained on iris dataset")
 ```
 
 ## Further examples

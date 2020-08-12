@@ -52,6 +52,13 @@ The QPS estimation function `estimate_qps` only accepts models in the ONNX frame
 
 - [Sklearn](https://github.com/onnx/sklearn-onnx/)
 - [Pytorch](https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html)
+- [LightGBM](https://github.com/microsoft/LightGBM)
+- [XGBoost (experimental)](https://github.com/dmlc/xgboost)
+- [CatBoost (experimental)](https://github.com/catboost/catboost)
+- [CoreML (experimental)](https://github.com/apple/coremltools)
+- [LibSVM (experimental)](https://github.com/cjlin1/libsvm)
+- [SparkML (experimental)](https://spark.apache.org/mllib/)
+- [Keras (experimental)](https://keras.io/)
 
 For conversion functions for other frameworks, please refer to the [onnxmltools repository](https://github.com/onnx/onnxmltools).
 Please note that `convert_to_onnx` requires that the relevant framework packages are installed.

@@ -131,7 +131,7 @@ iv_data.load_data(X_c = data[["new", "continuous", "cols"]])
 ```
 
 ## QPS Estimation 
-The main QPS estimation function is `estimate_qps`. The primary inputs are `X` an IVEstimatorDataset, `S` the number of draws per estimate, `delta` the radius of the ball, and `ML_onnx` the string path to a saved ONNX model for inference. Please refer to the documentation for the full list of keyword arguments that can be passed. 
+The main QPS estimation functions are `estimate_qps` and `estimate_qps_with_decision_function`. The primary inputs for `estimate_qps` are `X` an IVEstimatorDataset, `S` the number of draws per estimate, `delta` the radius of the ball, and `ML_onnx` the string path to a saved ONNX model for inference. `estimate_qps_with_decision_function` takes the same inputs along with a treatment decision function `fcn` for deterministic assignment. Please refer to the documentation for the full list of keyword arguments.
 ```python
 import pandas as pd
 import numpy as np
@@ -143,15 +143,24 @@ seed = 1
 ml_path = "path_to_your_onnx_model.onnx"
 
 # `seed` sets np.random.seed 
-qps = estimate_qps(iv_data, S, delta, ml_path, seed)
-qps2 = estimate_qps(iv_data, S, delta, ml_path, seed)
+qps = estimate_qps(iv_data, ml_path, S, delta, seed)
+qps2 = estimate_qps(iv_data, ml_path, S, delta, seed)
 assert qps == qps2
 
 # We can specify np types for coercion if the ONNX model expects different types 
-qps = estimate_qps(iv_data, S, delta, ml_path, types=(np.float64,))
+qps = estimate_qps(iv_data, ml_path, S, delta, types=(np.float64,))
 
 # If the ONNX model takes separate continuous and discrete inputs, then we need to specify the input type and input names
-qps = estimate_qps(iv_data, S, delta, ml_path, input_type=2, input_names=("c_inputs", "d_inputs"))
+qps = estimate_qps(iv_data, ml_path, S, delta, input_type=2, input_names=("c_inputs", "d_inputs"))
+
+from mlisne.qps import estimate_qps_with_decision_function
+
+# We can pass the base function `round` directly into the qps estimation, which will vectorize the function for us and round the ML outputs
+qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = round)
+
+# We can also pass a vectorized function with the flag `vectorized` 
+qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = np.round, vectorized=True)
+
 ```
 
 ## IV Estimation

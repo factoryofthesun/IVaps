@@ -158,6 +158,9 @@ from mlisne.qps import estimate_qps_with_decision_function
 # We can pass the base function `round` directly into the qps estimation, which will vectorize the function for us and round the ML outputs
 qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = round)
 
+# Additional keyword argument will be passed directly into the decision function
+qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = round, digits=5)
+
 # We can also pass a vectorized function with the flag `vectorized` 
 qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = np.round, vectorized=True)
 

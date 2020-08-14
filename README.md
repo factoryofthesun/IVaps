@@ -138,7 +138,8 @@ iv_data.load_data(X_c = data[["new", "continuous", "cols"]])
 ```
 
 ## QPS Estimation 
-The main QPS estimation functions are `estimate_qps` and `estimate_qps_with_decision_function`. The primary inputs for `estimate_qps` are `X` an IVEstimatorDataset, `S` the number of draws per estimate, `delta` the radius of the ball, and `ML_onnx` the string path to a saved ONNX model for inference. `estimate_qps_with_decision_function` takes the same inputs along with a treatment decision function `fcn` for deterministic assignment. Please refer to the documentation for the full list of keyword arguments.
+The main QPS estimation functions are `estimate_qps`, `estimate_qps_with_decision_function`, and `estimate_qps_user_defined`, each serving different algorithmic use-cases. `estimate_qps` serves the case when the immediate output of an ONNX model serves as the treatment recommendation. `estimate_qps_with_decision_function` serves the case when an additional decision function is passed to process the ML outputs. `estimate_qps_user_defined` serves the case when the user has a custom function that outputs treatment recommendations. In general, all the functions require as input `X` an IVEstimatorDataset, `S` the number of draws per estimate, and `delta` the radius of the ball. Please refer to the documentation for the full list of keyword arguments.
+
 ```python
 import pandas as pd
 import numpy as np
@@ -160,6 +161,7 @@ qps = estimate_qps(iv_data, ml_path, S, delta, types=(np.float64,))
 # If the ONNX model takes separate continuous and discrete inputs, then we need to specify the input type and input names
 qps = estimate_qps(iv_data, ml_path, S, delta, input_type=2, input_names=("c_inputs", "d_inputs"))
 
+### QPS estimation with passing ML outputs into a decision function
 from mlisne.qps import estimate_qps_with_decision_function
 
 # We can pass the base function `round` directly into the qps estimation, which will vectorize the function for us and round the ML outputs
@@ -170,6 +172,21 @@ qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = roun
 
 # We can also pass a vectorized function with the flag `vectorized` 
 qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = np.round, vectorized=True)
+
+### QPS estimation with a user-defined function
+model = pickle.load(open("path_to_your_model.pickle", 'rb'))
+
+# Basic decision function: assign treatment if prediction > c
+def assign_cutoff(X, c):
+    return (X > c).astype("int")
+
+# User-defined function to assign treatment recommendation
+def ml_round(X, **kwargs):
+    preds = model.predict_proba(X)
+    treat = assign_cutoff(preds, **kwargs)
+    return treat
+
+qps = estimate_qps_user_defined(iris_dataset_discrete, ml_round, c = 0.5)
 
 ```
 

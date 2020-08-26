@@ -52,6 +52,13 @@ The QPS estimation function `estimate_qps` only accepts models in the ONNX frame
 
 - [Sklearn](https://github.com/onnx/sklearn-onnx/)
 - [Pytorch](https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html)
+- [LightGBM](https://github.com/microsoft/LightGBM)
+- [XGBoost (experimental)](https://github.com/dmlc/xgboost)
+- [CatBoost (experimental)](https://github.com/catboost/catboost)
+- [CoreML (experimental)](https://github.com/apple/coremltools)
+- [LibSVM (experimental)](https://github.com/cjlin1/libsvm)
+- [SparkML (experimental)](https://spark.apache.org/mllib/)
+- [Keras (experimental)](https://keras.io/)
 
 For conversion functions for other frameworks, please refer to the [onnxmltools repository](https://github.com/onnx/onnxmltools).
 Please note that `convert_to_onnx` requires that the relevant framework packages are installed.
@@ -131,7 +138,8 @@ iv_data.load_data(X_c = data[["new", "continuous", "cols"]])
 ```
 
 ## QPS Estimation 
-The main QPS estimation function is `estimate_qps`. The primary inputs are `X` an IVEstimatorDataset, `S` the number of draws per estimate, `delta` the radius of the ball, and `ML_onnx` the string path to a saved ONNX model for inference. Please refer to the documentation for the full list of keyword arguments that can be passed. 
+The main QPS estimation functions are `estimate_qps`, `estimate_qps_with_decision_function`, and `estimate_qps_user_defined`, each serving different algorithmic use-cases. `estimate_qps` serves the case when the immediate output of an ONNX model serves as the treatment recommendation. `estimate_qps_with_decision_function` serves the case when an additional decision function is passed to process the ML outputs. `estimate_qps_user_defined` serves the case when the user has a custom function that outputs treatment recommendations. In general, all the functions require as input `X` an IVEstimatorDataset, `S` the number of draws per estimate, and `delta` the radius of the ball. Please refer to the documentation for the full list of keyword arguments.
+
 ```python
 import pandas as pd
 import numpy as np
@@ -143,15 +151,43 @@ seed = 1
 ml_path = "path_to_your_onnx_model.onnx"
 
 # `seed` sets np.random.seed 
-qps = estimate_qps(iv_data, S, delta, ml_path, seed)
-qps2 = estimate_qps(iv_data, S, delta, ml_path, seed)
+qps = estimate_qps(iv_data, ml_path, S, delta, seed)
+qps2 = estimate_qps(iv_data, ml_path, S, delta, seed)
 assert qps == qps2
 
 # We can specify np types for coercion if the ONNX model expects different types 
-qps = estimate_qps(iv_data, S, delta, ml_path, types=(np.float64,))
+qps = estimate_qps(iv_data, ml_path, S, delta, types=(np.float64,))
 
 # If the ONNX model takes separate continuous and discrete inputs, then we need to specify the input type and input names
-qps = estimate_qps(iv_data, S, delta, ml_path, input_type=2, input_names=("c_inputs", "d_inputs"))
+qps = estimate_qps(iv_data, ml_path, S, delta, input_type=2, input_names=("c_inputs", "d_inputs"))
+
+### QPS estimation with passing ML outputs into a decision function
+from mlisne.qps import estimate_qps_with_decision_function
+
+# We can pass the base function `round` directly into the qps estimation, which will vectorize the function for us and round the ML outputs
+qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = round)
+
+# Additional keyword argument will be passed directly into the decision function
+qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = round, digits=5)
+
+# We can also pass a vectorized function with the flag `vectorized` 
+qps = estimate_qps_with_decision_function(iv_data, ml_path, S, delta, fcn = np.round, vectorized=True)
+
+### QPS estimation with a user-defined function
+model = pickle.load(open("path_to_your_model.pickle", 'rb'))
+
+# Basic decision function: assign treatment if prediction > c
+def assign_cutoff(X, c):
+    return (X > c).astype("int")
+
+# User-defined function to assign treatment recommendation
+def ml_round(X, **kwargs):
+    preds = model.predict_proba(X)
+    treat = assign_cutoff(preds, **kwargs)
+    return treat
+
+qps = estimate_qps_user_defined(iris_dataset_discrete, ml_round, c = 0.5)
+
 ```
 
 ## IV Estimation

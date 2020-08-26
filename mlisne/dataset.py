@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from pydantic.dataclasses import dataclass # Use pydantic for runtime type-checking
-from dataclasses import InitVar
+from pydantic import validator
+from dataclasses import InitVar, field
 from pathlib import Path
-from typing import Tuple, Dict, Union, Sequence, Optional
+from typing import Tuple, Set, Dict, Union, Sequence, Optional
 import warnings
 import numpy as np
 import pandas as pd
@@ -24,7 +25,6 @@ class BaseEstimatorDataset(ABC):
         """Preprocess raw data"""
         raise NotImplementedError()
 
-# TODO: TENSOR SUPPORT
 @dataclass(config=Config)
 class IVEstimatorDataset(BaseEstimatorDataset):
     """Class for loading and preprocessing data for IV method of treatment effect estimation.
@@ -39,12 +39,14 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         Data object of binary ML assignment variable (int)
     D: Union[int, np.ndarray, pd.Series]
         Data object of binary treatment assignment variable (int)
-    X_c: Union[np.ndarray, pd.DataFrame]
+    X_c: Array-like
         Data object of continuous variables (float)
-    X_d: Union[np.ndarray, pd.DataFrame]
+    X_d: Array-like
         Data object of discrete variables (int)
+    L: Dict[int, Set]
+        Dictionary with keys as indices of X_c and values as sets of discrete values
 
-    WARNING: if both C and X_d are not given, then all covariates are assumed to be continuous!
+    WARNING: if none of X_c and X_d are given, then all covariates are assumed to be continuous!
 
     """
 
@@ -54,7 +56,8 @@ class IVEstimatorDataset(BaseEstimatorDataset):
     D: Union[int, np.ndarray, pd.Series, Sequence] = None
     X_c: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None
     X_d: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None
-
+    L: Dict[int, Set] = None
+    
     def __post_init__(self, data) -> None:
         """Initialize IV Estimator Dataset"""
         self.load_data(data, self.Y, self.Z, self.D, self.X_c, self.X_d)
@@ -68,10 +71,11 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         """
         If `data` is given, then the remaining arguments are expected to be indices of the relevant variables.
             Any missing indices will be inferred from the expected column order in `data`: [Y, Z, D, X_c, X_d].
-            If neither X_c nor X_d are given, then the covariates are assumed to be all continuous.
+            If X_c is not given, then it is always assumed to be the remaining columns after parsing.
+            Similarly, X_d is assumed to be the remaining columns if X_c is given.
         Otherwise, the remaining arguments are expected to be data objects for overwriting specific variables.
         """
-        
+
         if data is not None:
             # TODO: Raise error if data does not have minimum number of columns
             if isinstance(data, str) or isinstance(data, os.PathLike):
@@ -81,13 +85,13 @@ class IVEstimatorDataset(BaseEstimatorDataset):
             infer = []
             indices_to_remove = []
             for key, val in locals().items():
-                if key in ["self", "data", "infer"]:
+                if key in ["self", "data", "infer", "indices_to_remove"]:
                     continue
                 if val is None:
                     infer.append(key)
                     continue
                 if key in ['X_c', "X_d"]:
-                    setattr(self,key, np.squeeze(data[:,val].astype(float)))
+                    setattr(self, key, np.squeeze(data[:,val].astype(float)))
                 else:
                     setattr(self, key, data[:,val])
                 # Save indices to be removed
@@ -96,6 +100,7 @@ class IVEstimatorDataset(BaseEstimatorDataset):
                 else:
                     indices_to_remove.append(val)
             data = np.delete(data, indices_to_remove, axis=1)
+
             if "X_c" in infer:
                 if "X_d" in infer:
                     warnings.warn("Neither continuous nor discrete indices were explicitly given. We will assume all covariates in data are continuous.", stacklevel=2)
@@ -114,12 +119,18 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         # If data not given, then override data objects
         else:
             for key, val in locals().items():
-                if key in ["self", "data", "infer"]:
+                if key in ["self", "data", "infer", "indices_to_remove"]:
                     continue
                 if val is None or isinstance(val, int):
                     continue
                 # TODO: Enforce data object type if `data` not passed!
                 val = np.array(val)
                 setattr(self, key, val)
+
+        # Validation checks
+        if self.X_c is not None and self.L is not None:
+            if any([i not in range(self.X_c.shape[1]) for i in self.L.keys()]):
+                raise ValueError(f"Mixed-variable indices are out of bounds! X_c shape: {self.X_c.shape}")
+
     def preprocess(self) -> None:
         pass

@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from pathlib import Path
 from sklearn.datasets import load_iris
+import lightgbm as lgb
 import onnxruntime as rt
 from pathlib import Path
 
@@ -102,6 +103,11 @@ def churn_cat_model():
     model.eval()
     return model
 
+@pytest.fixture()
+def lgbm_model():
+    model = lgb.Booster(model_file= f"{model_path}/lgbm_example.txt")
+    return model
+
 @pytest.fixture
 def iris_data():
     iris = pd.read_csv(f"{data_path}/iris_data.csv")
@@ -111,6 +117,11 @@ def iris_data():
 def churn_data():
     churn = pd.read_csv(f"{data_path}/churn_data.csv")
     return churn
+
+@pytest.fixture
+def lgbm_data():
+    data = pd.read_csv(f"{data_path}/lgbm_regression.test", header=None, sep='\t')
+    return data
 
 def test_sklearn_conversion(iris_model, iris_data):
     X_dummy = np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']])
@@ -152,7 +163,8 @@ def test_torch_conversion(churn_model, churn_data):
     with torch.no_grad():
         torch_preds = churn_model(tot_tensor).numpy()
     sess = rt.InferenceSession(f)
-    onnx_preds = sess.run(["output_probability"], {"input": tot_data.astype(np.float32)})[0]
+    output_name = sess.get_outputs()[0].name
+    onnx_preds = sess.run([output_name], {"c_inputs": tot_data.astype(np.float32)})[0]
 
     np.testing.assert_array_almost_equal(torch_preds, onnx_preds, decimal=5)
 
@@ -181,7 +193,26 @@ def test_torch_cat_conversion(churn_cat_model, churn_data):
     with torch.no_grad():
         torch_preds = churn_cat_model(cat_tensor, num_tensor).numpy()
     sess = rt.InferenceSession(f)
-    onnx_preds = sess.run(["output_probability"], {"c_inputs": num_data.astype(np.float32),
+    output_name = sess.get_outputs()[0].name
+    onnx_preds = sess.run([output_name], {"c_inputs": num_data.astype(np.float32),
                                                    "d_inputs": cat_data.astype(np.int64)})[0]
 
     np.testing.assert_array_almost_equal(torch_preds, onnx_preds, decimal=5)
+
+def test_lgbm_conversion(lgbm_model, lgbm_data):
+    X = lgbm_data.drop(0, axis=1)
+    og_preds = lgbm_model.predict(X)
+
+    X_dummy = np.array(X)[0,:]
+    print(X_dummy.shape)
+
+    f = os.path.join(os.path.dirname(__file__), "test_models/lgbm.onnx")
+    convert_to_onnx(lgbm_model, X_dummy, f, "lightgbm", target_opset=12)
+
+    sess = rt.InferenceSession(f)
+    label_name = sess.get_outputs()[0].name
+    input_name = sess.get_inputs()[0].name
+    onnx_preds = sess.run([label_name], {input_name: np.array(X)})[0]
+    print(onnx_preds.shape)
+
+    np.testing.assert_array_almost_equal(og_preds, np.squeeze(onnx_preds), decimal=5)

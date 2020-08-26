@@ -13,6 +13,7 @@ import scipy.stats as stats
 from prettytable import PrettyTable
 
 from mlisne.dataset import IVEstimatorDataset
+from mlisne.helpers import run_onnx_session
 
 class TreatmentIVEstimator(BaseEstimator):
     """Class to estimate treatment effects using 2SLS method
@@ -21,13 +22,13 @@ class TreatmentIVEstimator(BaseEstimator):
 
     ..math::
 
-        D_i = \\gamma_0 + \\gamma_1 Z_i + \\gamma_2 p^s(X_i;\\delta) + v_i \\
-        Y_i = \\beta_0 + \\beta_1 D_i + \\beta_2 p^s(X_i;\\delta) + \\eps_i
+        D_i = \\gamma_0(1-I) + \\gamma_1 Z_i + \\gamma_2 p^s(X_i;\\delta) + v_i \\
+        Y_i = \\beta_0(1-I) + \\beta_1 D_i + \\beta_2 p^s(X_i;\\delta) + \\eps_i
 
-    :math:`\\beta_1` is our causal estimation of the treatment effect.
+    :math:`\\beta_1` is our causal estimation of the treatment effect. `I` is an indicator for if the ML funtion takes only a single nondegenerate value in the sample.
 
     """
-    
+
     def __init__(self):
         self.__coef = None
         self.__varcov = None
@@ -101,7 +102,7 @@ class TreatmentIVEstimator(BaseEstimator):
         self.__lowerci = self.__coef + self.__std_error * stats.t.ppf(0.025, self.__df_resid)
         self.__inputs = {'Y':Y_adj, 'Z':Z_adj, 'D':D_adj, 'QPS':QPS_adj}
 
-        # Compute first stage values as well in order to save
+        # Compute first stage values as well in order to save time
         self.__firststage = self._fit_firststage(W.T, D_adj, single_nondegen)
         self.__postest = None
 
@@ -289,6 +290,250 @@ class TreatmentIVEstimator(BaseEstimator):
     #     postest = self.postest
     #     ret += f"Covariance type: {self.postest['cov_type']}\n"
     #     return ret
+
+    def __repr__(self):
+        """Calls post_estimation if post-estimation attributes not computed yet. Prints summary table"""
+        if not self.__fit:
+            return f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator..."
+        return self.__summary()
+
+class CounterfactualMLEstimator(BaseEstimator):
+    """Class to estimate counterfactual performance of another algorithm
+
+    The `fit` class method estimates the following equation
+
+    ..math::
+
+        Y_i = \\beta_0 + \\beta_1 Z_i + \\beta_2 p^s(X_i;\\delta) + \\eps_i
+
+    :math:`\\beta_1` is our estimated effect of treatment recommendation.
+
+    The `predict_counterfact` method takes an ML input (ONNX or user-defined function) and estimates the following value equation
+
+    ..math::
+
+        \\hat(V)(ML') = \\frac{1}{n} \\sum_{i = 1}^n (Y_i + \\hat(\\beta_{ols})(ML'(X_i) - ML(X_i))
+
+    """
+
+    def __init__(self):
+        self.__coef = None
+        self.__varcov = None
+        self.__N = None
+        self.__resid = None
+        self.__fitted = None
+        self.__fit = False
+        self.__postest = None
+    def fit(self, data: IVEstimatorDataset, qps: np.ndarray, cov_type: str = "unadjusted") -> None:
+        """Fit OLS estimator
+
+        Parameters
+        -----------
+        data: IVEstimatorDataset
+            Dataset class loaded with Y, Z, D, and X
+        qps: array-like, shape(n_sample,)
+            Estimated quasi propensity scores for each observation
+        single_nondegen: Boolean
+            Indicator for whether the ML model takes on only 1 nondegenerate value in the sample
+
+        Returns
+        -----------
+        None
+
+        """
+
+        Y = data.Y
+        Z = data.Z
+        N = Y.shape[0]
+
+        X = np.stack((np.ones(N), Z, qps), axis=0).T
+
+        beta_hat = multi_dot([inv(X.T @ X), X.T, Y])
+        e_hat = Y - beta_hat[0] - np.multiply(X[:,1], beta_hat[1]) - np.multiply(X[:,2], beta_hat[2])
+        e_hat_sq = np.diag(e_hat**2)
+        rss = np.sum(e_hat**2)
+        s2 = rss/(N-3)
+
+        if cov_type == "unadjusted":
+            var_cov = multi_dot([inv(np.dot(X.T, X)), X.T, e_hat_sq, X, inv(np.dot(X.T, X))])
+        elif cov_type == "robust": # Heteroskedastic robust covariance
+            var_cov = s2 * inv(np.dot(X.T, X))
+        else:
+            raise ValueError(f"{cov_type} not a valid covariance type! Please enter either 'unadjusted' or 'robust'.")
+
+        self.__coef = beta_hat
+        self.__varcov = var_cov
+        self.__N = N
+        self.__df_resid = self.__N - 3 # 3 coefficients being estimated
+        self.__resid = e_hat
+        self.__fitted = Y - e_hat
+        self.__fit = True
+        self.__std_error = np.sqrt(np.diag(self.__varcov))
+        self.__tstat = self.__coef/self.__std_error
+        self.__p = 2 - 2 * stats.t.cdf(abs(self.__tstat), self.__df_resid)
+        self.__upperci = self.__coef + self.__std_error * stats.t.ppf(0.975, self.__df_resid)
+        self.__lowerci = self.__coef + self.__std_error * stats.t.ppf(0.025, self.__df_resid)
+        self.__cov_type = cov_type
+
+        self.__postest = None
+
+    def predict(self, X: np.ndarray):
+        """Predict outcome
+
+        Parameters
+        -----------
+        X: array-like
+            Model inputs (Z, qps)
+
+        Returns
+        -----------
+        Output prediction
+
+        """
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+
+        return self.coef[0] + np.sum(self.coef[1:2] * X, axis = 1)
+
+    def predict_counterfact(self, Y: np.ndarray, original_rec: np.ndarray, new_rec: np.ndarray, verbose=True):
+        """Predict counterfactual value of a new ML algorithm
+
+        Parameters
+        -----------
+        Y: array-like
+            Outcome data from original treatment
+        original_rec: array-like
+            Probabilities of treatment recommendation from original ML algorithm
+        new_rec: array-like
+            Probabilities of treatment recommendation from new ML algorithm
+        verbose: boolean, default = True
+            Whether to print counterfactual value estimation
+
+        Returns
+        -----------
+        Estimated counterfactual value
+
+        """
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        b_ols = self.coef[1]
+        v = np.mean(Y + b_ols * (new_rec - original_rec))
+        if verbose:
+            print(f"Counterfactual value of new ML function: {v}")
+        return v
+
+    @property
+    def coef(self):
+        """Returns: np array of estimated coefficients, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__coef
+
+    @property
+    def varcov(self):
+        """Returns: variance-covariance matrix, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__varcov
+
+    @property
+    def fitted(self):
+        """Returns: fitted values, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__fitted
+
+    @property
+    def resid(self):
+        """Returns: residuals, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__resid
+
+    @property
+    def tstat(self):
+        """Returns: count of fitted values, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__tstat
+
+    @property
+    def std_error(self):
+        """Returns: count of fitted values, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__std_error
+
+    @property
+    def p(self):
+        """Returns: count of fitted values, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__p
+
+    @property
+    def n_fit(self):
+        """Returns: count of fitted values, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__N
+
+    @property
+    def ci(self):
+        """Returns: Second stage coefficient CI, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return np.stack((self.__lowerci, self.__upperci), axis=1)
+
+    @property
+    def inputs(self):
+        """Returns: Second stage adjusted inputs, if fitted"""
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        return self.__inputs
+
+    @property
+    def postest(self):
+        """Computes post-estimation attributes if not called yet.
+        Returns dictionary of attributes.
+        """
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+        elif self.__postest is None:
+            print("First time calling post-estimation. Computing values...")
+            self.__postest = {'resid':self.resid, 'cov':self.varcov, 'cov_type':self.cov_type, 'fitted':self.fitted}
+            rss = np.sum(self.resid**2)
+            self.__postest['rss'] = rss
+            self.__postest['s2'] = rss/(self.n_fit - 3) # Unbiased estimate of residual variance
+            Y = self.__fitted + self.resid
+            tss = np.sum((Y - np.mean(Y))**2)
+            self.__postest['tss'] = tss
+            self.__postest['r2'] = 1 - rss/tss
+        return self.__postest
+
+    def __summary(self) -> str:
+        """Summary str of model estimation results"""
+        x = PrettyTable()
+        x.field_names = ["", "Parameter", "Std. Err", "T-Stat", "P-Value", "Lower CI", "Upper CI"]
+        coef_list = ['const', 'ML Recommendation', 'QPS']
+        for i in range(len(self.coef)):
+            row = [coef_list[i], round(self.coef[i], 4), round(self.std_error[i], 4), round(self.tstat[i], 4), round(self.p[i], 4), round(self.__lowerci[i], 4), round(self.__upperci[i], 4)]
+            x.add_row(row)
+        ret = x.get_string()
+        return ret
 
     def __repr__(self):
         """Calls post_estimation if post-estimation attributes not computed yet. Prints summary table"""

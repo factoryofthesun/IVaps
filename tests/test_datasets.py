@@ -84,3 +84,24 @@ def test_overwrite():
     assert all(dt.D == np.array(["D_new"]*20))
     assert np.array_equal(dt.X_c, np.tile(np.array([1,2,3,4,5]), (20,1)))
     assert np.array_equal(dt.X_d, np.tile(np.array([1,2,3,4,5]), (20,1)))
+
+def test_mixed_variables():
+    sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "iris_data.csv"
+    C = range(4,8)
+    L = {1:{3,4}}
+    dt = IVEstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)
+
+    validate_df = pd.read_csv(sample_data_path)
+    assert all(dt.Y == np.array(validate_df['Y']))
+    assert all(dt.Z == np.array(validate_df['Z']))
+    assert all(dt.D == np.array(validate_df["D"]))
+    assert np.array_equal(dt.X_c, np.array(validate_df.iloc[:,C]))
+    assert np.array_equal(dt.X_d, np.array(validate_df.iloc[:,0:2]))
+    assert dt.L == L
+
+def test_mixed_value_error():
+    sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "iris_data.csv"
+    C = range(4,8)
+    L = {4:{3,4}}
+    with pytest.raises(ValueError):
+        dt = IVEstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)

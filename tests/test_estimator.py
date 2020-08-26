@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 from sklearn.datasets import load_iris
+from sklearn.linear_model import LinearRegression
 import onnxruntime as rt
 from pathlib import Path
 from linearmodels.iv import IV2SLS
@@ -13,14 +14,22 @@ import statsmodels.api as sm
 
 from mlisne.dataset import IVEstimatorDataset
 from mlisne.qps import estimate_qps
-from mlisne.estimator import TreatmentIVEstimator
+from mlisne.estimator import TreatmentIVEstimator, CounterfactualMLEstimator
 
+sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
+sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")
+sklearn_logreg_infer = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_infertype.onnx")
 model_path = str(Path(__file__).resolve().parents[1] / "examples" / "models")
 data_path = str(Path(__file__).resolve().parents[1] / "examples" / "data")
 
 @pytest.fixture
 def empty_estimator():
     est = TreatmentIVEstimator()
+    return est
+
+@pytest.fixture
+def empty_cf_estimator():
+    est = CounterfactualMLEstimator()
     return est
 
 @pytest.fixture
@@ -44,7 +53,7 @@ def test_all_empty(empty_estimator):
 def test_iris_estimation(empty_estimator, iris_data):
     data = np.array(iris_data.drop(['Y0', 'Y1'], axis=1))
     dataset = IVEstimatorDataset(data)
-    qps = estimate_qps(dataset, 100, 0.8, f"{model_path}/iris_logreg.onnx")
+    qps = estimate_qps(dataset, f"{model_path}/iris_logreg.onnx")
     empty_estimator.fit(dataset, qps)
 
     print(empty_estimator) # Should print summary table
@@ -117,3 +126,36 @@ def test_iris_estimation(empty_estimator, iris_data):
     assert np.array_equal(np.round(std_error, 5), np.round(validation_stderr.to_numpy().flatten()[[0,2,1]], 5))
     assert np.array_equal(np.round(t, 5), np.round(validation_t.to_numpy().flatten()[[0,2,1]], 5))
     assert np.array_equal(np.round(r2, 5), np.round(validation_r2, 5))
+
+def test_cf_all_empty(empty_cf_estimator):
+    assert empty_cf_estimator.coef is None
+    assert empty_cf_estimator.varcov is None
+    assert empty_cf_estimator.fitted is None
+    assert empty_cf_estimator.resid is None
+    assert empty_cf_estimator.tstat is None
+    assert empty_cf_estimator.std_error is None
+    assert empty_cf_estimator.p is None
+    assert empty_cf_estimator.n_fit is None
+    assert empty_cf_estimator.ci is None
+
+def test_counterfactual_estimation(iris_data, empty_cf_estimator):
+    data = np.array(iris_data.drop(['Y0', 'Y1'], axis=1))
+    dataset = IVEstimatorDataset(data)
+    qps = estimate_qps(dataset, f"{sklearn_logreg}", types=(np.float32,None))
+    empty_cf_estimator.fit(dataset, qps)
+
+    print(empty_cf_estimator)
+
+    og_sess = rt.InferenceSession(sklearn_logreg)
+    og_input = og_sess.get_inputs()[0].name
+    og_preds = og_sess.run(['output_probability'], {og_input: dataset.X_c.astype(np.float32)})[0]
+    og_out = np.array([d[1] for d in og_preds])
+
+    new_sess = rt.InferenceSession(sklearn_logreg_infer)
+    new_input = new_sess.get_inputs()[0].name
+    new_preds = new_sess.run(['output_probability'], {new_input: dataset.X_c.astype(np.float32)})[0]
+    new_out = np.array([d[1] for d in new_preds])
+
+    pred_value = empty_cf_estimator.predict_counterfact(dataset.Y, og_out, new_out)
+    validate_value = np.mean(dataset.Y + empty_cf_estimator.coef[1] * (new_out - og_out))
+    assert pred_value == validate_value

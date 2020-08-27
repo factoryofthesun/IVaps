@@ -8,9 +8,23 @@ MLISNE: Machine Learning is Natural Experiment Documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Introduction:
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting Started:   
 
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference:
+
+   mlisne
+ 
+.. toctree::
+   :maxdepth: 2
+   :caption: Others:
+
+   Github <https://github.com/factoryofthesun/mlisne>
 
 Indices and tables
 ==================

@@ -39,9 +39,9 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         Data object of binary ML assignment variable (int)
     D: Union[int, np.ndarray, pd.Series]
         Data object of binary treatment assignment variable (int)
-    X_c: Array-like
+    X_c: array-like
         Data object of continuous variables (float)
-    X_d: Array-like
+    X_d: array-like
         Data object of discrete variables (int)
     L: Dict[int, Set]
         Dictionary with keys as indices of X_c and values as sets of discrete values
@@ -57,7 +57,7 @@ class IVEstimatorDataset(BaseEstimatorDataset):
     X_c: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None
     X_d: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None
     L: Dict[int, Set] = None
-    
+
     def __post_init__(self, data) -> None:
         """Initialize IV Estimator Dataset"""
         self.load_data(data, self.Y, self.Z, self.D, self.X_c, self.X_d)
@@ -71,9 +71,9 @@ class IVEstimatorDataset(BaseEstimatorDataset):
         """
         If `data` is given, then the remaining arguments are expected to be indices of the relevant variables.
             Any missing indices will be inferred from the expected column order in `data`: [Y, Z, D, X_c, X_d].
-            If X_c is not given, then it is always assumed to be the remaining columns after parsing.
+            If X_c is not given, then it is always assumed to be the remaining columns after accounting for Y, Z, and D.
             Similarly, X_d is assumed to be the remaining columns if X_c is given.
-        Otherwise, the remaining arguments are expected to be data objects for overwriting specific variables.
+        If `data` is not given, the remaining arguments are expected to be data objects for overwriting specific variables.
         """
 
         if data is not None:

@@ -120,17 +120,17 @@ def estimate_qps(X: IVEstimatorDataset, ML_onnx: str, S: int = 100, delta: float
         Radius of sampling ball
     seed: int, default: None
         Seed for sampling
-    types: list-like, length(2), default: (None, None)
-        Numpy dtypes for continuous and discrete data
-    input_type: 1 or 2, default: 1
-        Whether the model takes continuous/discrete inputs together or separately
-    input_names: tuple, length(2), default: ("c_inputs", "d_inputs")
-        Names for input nodes of ONNX model
+    types: Tuple[np.dtype, np.dtype], default: (None, None)
+        Numpy dtypes for continuous and discrete data; by default types are inferred
+    input_type: int, default: 1
+        Whether the model takes continuous/discrete inputs together (1) or separately (2)
+    input_names: Tuple[str,str], default: ("c_inputs", "d_inputs")
+        Names of input nodes of ONNX model
     fcn: Object, default: None
         Decision function to apply to ML output
     vectorized: bool, default: False
         Indicator for whether decision function is already vectorized
-        
+
     Returns
     -----------
     qps: array-like, shape(n_sample,)
@@ -153,10 +153,8 @@ def estimate_qps(X: IVEstimatorDataset, ML_onnx: str, S: int = 100, delta: float
 
         # Get indices of mixed vars to replace for each row
         mixed_og_inds = [L_keys[np.where(X_c[i,L_keys] == L_vals)[0]] for i in range(X_c.shape[0])]
-        print(mixed_og_inds)
         # Save original discrete values
         mixed_og_vals = [X_c[i,mixed_og_inds[i]] for i in range(len(mixed_og_inds))]
-        print(mixed_og_vals)
         # Replace values at indices with NA
         for i in range(len(mixed_og_inds)):
             X_c[i,mixed_og_inds[i]] = np.nan

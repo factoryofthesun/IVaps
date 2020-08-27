@@ -408,7 +408,7 @@ class CounterfactualMLEstimator(BaseEstimator):
         new_rec: array-like
             Probabilities of treatment recommendation from new ML algorithm
         verbose: boolean, default = True
-            Whether to print counterfactual value estimation
+            Whether to print counterfactual value estimation to console
 
         Returns
         -----------

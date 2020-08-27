@@ -55,16 +55,20 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
 
     Parameters
     -----------
-    model: fitted model object
+    model: object
+        fitted model object
     dummy_input: 1D input array or 2-tuple of continuous and discrete input arrays
         Used for type inference and passed into downstream conversion functions
-    path: string path to save ONNX model
-    framework: one of the currently implemented frameworks
-    input_type: 1 if single array input, 2 if model takes continuous and discrete values separately
-    input_names: tuple, length(2), default: ("c_inputs", "d_inputs")
-        input names for later ONNX inference;
-    output_names: list, default: None
-        output names for later ONNX inference; if none defaults to naming the outputs sequentially "output_1", "output_2", etc...
+    path: str
+        path to save ONNX model
+    framework: str
+        Reference string for one of the implemented frameworks
+    input_type: int, default: 1
+        1 if single array input, 2 if model takes continuous and discrete values separately
+    input_names: Tuple[str, str], default: ("c_inputs", "d_inputs")
+        input names to assign ONNX model
+    output_names: list-like, default: None
+        output names for later ONNX inference; if None defaults to naming the outputs sequentially "output_1", "output_2", etc...
     **kwargs: keyword arguments to be passed into mltools conversion function
 
     Returns

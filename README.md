@@ -137,6 +137,26 @@ iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2)
 iv_data.load_data(X_c = data[["new", "continuous", "cols"]])
 ```
 
+### Mixed Variables Treatment
+The data loader is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The dataset stores an object `L`, which is a dictionary where the keys are the indices of `X_c` that are mixed, and the values are sets of the discrete values each variable takes on. The rest of the pipeline operates as described below irrespective of mixed variables. 
+
+```python
+import pandas as pd
+import numpy as np
+from mlisne.dataset import IVEstimatorDataset
+
+data = pd.read_csv("path_to_your_historical_data.csv")
+
+# Create mixed variables dictionary
+L = {0: {0}, 3: {5, 10}} # This indicates that the 0th and 3rd index continuous variables are mixed variables with the passed discrete parts
+
+# Initialization 
+iv_data = IVEstimatorDataset(data, L = L)
+
+# L can also be assigned directly 
+iv_data.L = L
+```
+
 ## QPS Estimation 
 The main QPS estimation functions are `estimate_qps`, `estimate_qps_with_decision_function`, and `estimate_qps_user_defined`, each serving different algorithmic use-cases. `estimate_qps` serves the case when the immediate output of an ONNX model serves as the treatment recommendation. `estimate_qps_with_decision_function` serves the case when an additional decision function is passed to process the ML outputs. `estimate_qps_user_defined` serves the case when the user has a custom function that outputs treatment recommendations. In general, all the functions require as input `X` an IVEstimatorDataset, `S` the number of draws per estimate, and `delta` the radius of the ball. Please refer to the documentation for the full list of keyword arguments.
 

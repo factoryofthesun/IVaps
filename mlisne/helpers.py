@@ -1,3 +1,4 @@
+"""Helper functions"""
 from pathlib import Path
 from typing import Tuple, Dict, Union, Sequence, Optional
 import onnxruntime as rt
@@ -28,7 +29,7 @@ def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, in
 
     Returns
     -----------
-    Outputs of inference or fcn
+    Outputs of ONNX inference or fcn
 
     """
 
@@ -73,7 +74,8 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
 
     Returns
     -----------
-    Boolean flag indicating successful conversion
+    bool
+        Flag indicating successful conversion
 
     """
 
@@ -184,3 +186,7 @@ def _guess_numpy_type(data_type):
         "Unsupported data_type '{}'. You may raise an issue "
         "at https://github.com/onnx/sklearn-onnx/issues."
         "".format(data_type))
+
+class Config:
+    """Configuration class for Pydantic Dataclass"""
+    arbitrary_types_allowed = True

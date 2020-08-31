@@ -11,7 +11,7 @@ import onnxruntime as rt
 from pathlib import Path
 
 from mlisne.dataset import IVEstimatorDataset
-from mlisne.qps import estimate_qps, estimate_qps_with_decision_function, estimate_qps_user_defined
+from mlisne.qps import estimate_qps, estimate_qps_user_defined
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")

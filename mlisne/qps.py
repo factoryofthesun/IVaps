@@ -1,3 +1,4 @@
+"""QPS estimation functions"""
 from pathlib import Path
 from typing import Tuple, Dict, Set, Union, Sequence, Optional
 import onnxruntime as rt
@@ -49,7 +50,7 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
 
     Returns
     -----------
-    qps: float
+    float
         Estimated qps for the observation row
 
     """
@@ -133,7 +134,7 @@ def estimate_qps(X: IVEstimatorDataset, ML_onnx: str, S: int = 100, delta: float
 
     Returns
     -----------
-    qps: array-like, shape(n_sample,)
+    np.ndarray
         Array of estimated QPS for each observation in sample
 
     """
@@ -221,7 +222,7 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
 
     Returns
     -----------
-    qps: float
+    float
         Estimated qps for the observation row
 
     """
@@ -266,7 +267,7 @@ def estimate_qps_user_defined(X: IVEstimatorDataset, ml, S: int = 100, delta: fl
 
     Returns
     -----------
-    qps: array-like, shape(n_sample,)
+    np.ndarray
         Array of estimated QPS for each observation in sample
 
     """

@@ -1,3 +1,4 @@
+"""Estimator classes"""
 from abc import ABC, abstractmethod
 from pydantic.dataclasses import dataclass # Use pydantic for runtime type-checking
 from dataclasses import InitVar
@@ -20,12 +21,12 @@ class TreatmentIVEstimator(BaseEstimator):
 
     The `fit` class method estimates the following equations
 
-    ..math::
+    .. math::
 
-        D_i = \\gamma_0(1-I) + \\gamma_1 Z_i + \\gamma_2 p^s(X_i;\\delta) + v_i \\
-        Y_i = \\beta_0(1-I) + \\beta_1 D_i + \\beta_2 p^s(X_i;\\delta) + \\eps_i
+        D_i = \gamma_0(1-I) + \gamma_1 Z_i + \gamma_2 p^s(X_i;\delta) + v_i \\
+        Y_i = \\beta_0(1-I) + \\beta_1 D_i + \\beta_2 p^s(X_i;\delta) + \epsilon_i
 
-    :math:`\\beta_1` is our causal estimation of the treatment effect. `I` is an indicator for if the ML funtion takes only a single nondegenerate value in the sample.
+    :math:`\\beta_1` is our causal estimation of the treatment effect. :math:`I` is an indicator for if the ML funtion takes only a single nondegenerate value in the sample.
 
     """
 
@@ -48,10 +49,6 @@ class TreatmentIVEstimator(BaseEstimator):
             Estimated quasi propensity scores for each observation
         single_nondegen: Boolean
             Indicator for whether the ML model takes on only 1 nondegenerate value in the sample
-
-        Returns
-        -----------
-        None
 
         """
 
@@ -106,9 +103,29 @@ class TreatmentIVEstimator(BaseEstimator):
         self.__firststage = self._fit_firststage(W.T, D_adj, single_nondegen)
         self.__postest = None
 
+    def predict(self, X: np.ndarray):
+        """Predict outcome
+
+        Parameters
+        -----------
+        X: array-like
+            Model inputs (D, qps)
+
+        Returns
+        -----------
+        np.ndarray
+            Array of predicted outcomes
+
+        """
+        if not self.__fit:
+            warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
+            return None
+
+        return self.coef[0] + np.sum(self.coef[1:2] * X, axis = 1)
+
     @property
     def coef(self):
-        """Returns: np array of estimated coefficients, if fitted"""
+        """np.ndarray: Estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -116,7 +133,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def varcov(self):
-        """Returns: variance-covariance matrix, if fitted"""
+        """np.ndarray: Variance-covariance matrix"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -124,7 +141,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def fitted(self):
-        """Returns: fitted values, if fitted"""
+        """np.ndarray: Fitted values"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -132,7 +149,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def resid(self):
-        """Returns: residuals, if fitted"""
+        """np.ndarray: Residuals"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -140,7 +157,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def tstat(self):
-        """Returns: count of fitted values, if fitted"""
+        """np.ndarray: T-stat of estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -148,7 +165,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def std_error(self):
-        """Returns: count of fitted values, if fitted"""
+        """np.ndarray: Standard error of estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -156,7 +173,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def p(self):
-        """Returns: count of fitted values, if fitted"""
+        """np.ndarray: P-value of estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -164,7 +181,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def n_fit(self):
-        """Returns: count of fitted values, if fitted"""
+        """int: Count of fitted values"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -172,7 +189,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def ci(self):
-        """Returns: Second stage coefficient CI, if fitted"""
+        """np.ndarray: Second stage coefficient CI"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -180,7 +197,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def inputs(self):
-        """Returns: Second stage adjusted inputs, if fitted"""
+        """np.ndarray: Second stage adjusted inputs"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -189,7 +206,12 @@ class TreatmentIVEstimator(BaseEstimator):
     @property
     def postest(self):
         """Computes post-estimation attributes if not called yet.
-        Returns dictionary of attributes.
+
+        Returns
+        -------
+        dict
+            Dictionary of attributes.
+
         """
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
@@ -208,6 +230,7 @@ class TreatmentIVEstimator(BaseEstimator):
 
     @property
     def firststage(self):
+        """dict: Dictionary containing first stage attributes"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -225,9 +248,7 @@ class TreatmentIVEstimator(BaseEstimator):
         print(x)
 
     def _fit_firststage(self, X, D, single_nondegen):
-        """Computes post-estimation attributes for first stage regression if not called yet.
-        Returns dictionary of first-stage attributes.
-        """
+        """Computes post-estimation attributes for first stage regression if not called yet. Returns dictionary of first-stage attributes."""
         fs_beta_hat = multi_dot([inv(X.T @ X), X.T, D])
         fs_out = {'coef':fs_beta_hat}
         if single_nondegen:
@@ -300,19 +321,19 @@ class TreatmentIVEstimator(BaseEstimator):
 class CounterfactualMLEstimator(BaseEstimator):
     """Class to estimate counterfactual performance of another algorithm
 
-    The `fit` class method estimates the following equation
+    The ``fit`` class method estimates the following equation
 
-    ..math::
+    .. math::
 
-        Y_i = \\beta_0 + \\beta_1 Z_i + \\beta_2 p^s(X_i;\\delta) + \\eps_i
+        Y_i = \\beta_0 + \\beta_1 Z_i + \\beta_2 p^s(X_i;\delta) + \epsilon_i
 
     :math:`\\beta_1` is our estimated effect of treatment recommendation.
 
-    The `predict_counterfact` method takes an ML input (ONNX or user-defined function) and estimates the following value equation
+    The ``predict_counterfact`` method takes an ML input (ONNX or user-defined function) and estimates the following value equation
 
-    ..math::
+    .. math::
 
-        \\hat(V)(ML') = \\frac{1}{n} \\sum_{i = 1}^n (Y_i + \\hat(\\beta_{ols})(ML'(X_i) - ML(X_i))
+        \hat{V}(ML') = \\frac{1}{n} \sum_{i = 1}^n (Y_i + \hat{\\beta_{ols}}(ML'(X_i) - ML(X_i))
 
     """
 
@@ -335,10 +356,6 @@ class CounterfactualMLEstimator(BaseEstimator):
             Estimated quasi propensity scores for each observation
         single_nondegen: Boolean
             Indicator for whether the ML model takes on only 1 nondegenerate value in the sample
-
-        Returns
-        -----------
-        None
 
         """
 
@@ -387,7 +404,8 @@ class CounterfactualMLEstimator(BaseEstimator):
 
         Returns
         -----------
-        Output prediction
+        np.ndarray
+            Array of predicted float value scores
 
         """
         if not self.__fit:
@@ -412,7 +430,8 @@ class CounterfactualMLEstimator(BaseEstimator):
 
         Returns
         -----------
-        Estimated counterfactual value
+        float
+            Estimated counterfactual value
 
         """
         if not self.__fit:
@@ -426,7 +445,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def coef(self):
-        """Returns: np array of estimated coefficients, if fitted"""
+        """np.ndarray: Estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -434,7 +453,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def varcov(self):
-        """Returns: variance-covariance matrix, if fitted"""
+        """np.ndarray: Variance-covariance matrix"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -442,7 +461,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def fitted(self):
-        """Returns: fitted values, if fitted"""
+        """np.ndarray: Fitted values"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -450,7 +469,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def resid(self):
-        """Returns: residuals, if fitted"""
+        """np.ndarray: Residuals"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -458,7 +477,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def tstat(self):
-        """Returns: count of fitted values, if fitted"""
+        """np.ndarray: T-stat of estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -466,7 +485,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def std_error(self):
-        """Returns: count of fitted values, if fitted"""
+        """np.ndarray: Standard error of estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -474,7 +493,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def p(self):
-        """Returns: count of fitted values, if fitted"""
+        """np.ndarray: P-value of estimated coefficients"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -482,7 +501,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def n_fit(self):
-        """Returns: count of fitted values, if fitted"""
+        """int: Count of fitted values"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -490,7 +509,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def ci(self):
-        """Returns: Second stage coefficient CI, if fitted"""
+        """np.ndarray: Second stage coefficient CI"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -498,7 +517,7 @@ class CounterfactualMLEstimator(BaseEstimator):
 
     @property
     def inputs(self):
-        """Returns: Second stage adjusted inputs, if fitted"""
+        """np.ndarray: Second stage adjusted inputs"""
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)
             return None
@@ -507,7 +526,12 @@ class CounterfactualMLEstimator(BaseEstimator):
     @property
     def postest(self):
         """Computes post-estimation attributes if not called yet.
-        Returns dictionary of attributes.
+
+        Returns
+        -------
+        dict
+            Dictionary of attributes
+
         """
         if not self.__fit:
             warnings.warn(f"This {type(self).__name__} instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator...", stacklevel=2)

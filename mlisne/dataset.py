@@ -1,3 +1,4 @@
+"""Dataset classes"""
 from abc import ABC, abstractmethod
 from pydantic.dataclasses import dataclass # Use pydantic for runtime type-checking
 from pydantic import validator
@@ -9,8 +10,7 @@ import numpy as np
 import pandas as pd
 import os
 
-class Config:
-    arbitrary_types_allowed = True
+from mlisne.helpers import Config
 
 class BaseEstimatorDataset(ABC):
     """Base MLisNE Dataset Class"""
@@ -46,8 +46,6 @@ class IVEstimatorDataset(BaseEstimatorDataset):
     L: Dict[int, Set]
         Dictionary with keys as indices of X_c and values as sets of discrete values
 
-    WARNING: if none of X_c and X_d are given, then all covariates are assumed to be continuous!
-
     """
 
     data: InitVar[Union[str, np.ndarray, pd.DataFrame]] = None
@@ -68,12 +66,27 @@ class IVEstimatorDataset(BaseEstimatorDataset):
                         D: Union[int, np.ndarray, pd.Series, Sequence] = None,
                         X_c: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None,
                         X_d: Union[np.ndarray, pd.Series, pd.DataFrame, Sequence] = None) -> None:
-        """
-        If `data` is given, then the remaining arguments are expected to be indices of the relevant variables.
-            Any missing indices will be inferred from the expected column order in `data`: [Y, Z, D, X_c, X_d].
-            If X_c is not given, then it is always assumed to be the remaining columns after accounting for Y, Z, and D.
-            Similarly, X_d is assumed to be the remaining columns if X_c is given.
-        If `data` is not given, the remaining arguments are expected to be data objects for overwriting specific variables.
+        """Method for loading and overwriting treatment data
+
+        Parameters
+        -----------
+        data: InitVar[Union[str, np.ndarray, pd.DataFrame]]
+            Data object or path to csv with columns assumed to be in order [Y, Z, D, X_d, X_c], unless other indices given
+        Y: Union[int, np.ndarray, pd.Series, Sequence]
+            Data object of outcome variable (float)
+        Z: Union[int, np.ndarray, pd.Series, Sequence]
+            Data object of binary ML assignment variable (int)
+        D: Union[int, np.ndarray, pd.Series]
+            Data object of binary treatment assignment variable (int)
+        X_c: array-like
+            Data object of continuous variables (float)
+        X_d: array-like
+            Data object of discrete variables (int)
+
+        Notes
+        -----
+        If `data` is given, then the remaining arguments are expected to be indices of the relevant variables. Any missing indices will be inferred from the expected column order in `data`: [Y, Z, D, X_c, X_d]. If X_c is not given, then it is always assumed to be the remaining columns after accounting for Y, Z, and D. Similarly, X_d is assumed to be the remaining columns if X_c is given. If `data` is not given, the remaining arguments are expected to be data objects for overwriting specific variables.
+
         """
 
         if data is not None:

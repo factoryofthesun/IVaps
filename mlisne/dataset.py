@@ -26,7 +26,7 @@ class BaseEstimatorDataset(ABC):
         raise NotImplementedError()
 
 @dataclass(config=Config)
-class IVEstimatorDataset(BaseEstimatorDataset):
+class EstimatorDataset(BaseEstimatorDataset):
     """Class for loading and preprocessing data for IV method of treatment effect estimation.
 
     Parameters

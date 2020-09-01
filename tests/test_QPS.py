@@ -10,7 +10,7 @@ from sklearn.datasets import load_iris
 import onnxruntime as rt
 from pathlib import Path
 
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 from mlisne.qps import estimate_qps, estimate_qps_user_defined
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
@@ -20,20 +20,20 @@ model_path = str(Path(__file__).resolve().parents[1] / "examples" / "models")
 
 @pytest.fixture
 def iris_dataset():
-    """Returns IVEstimatorDataset with iris loaded"""
+    """Returns EstimatorDataset with iris loaded"""
     iris = load_iris()
     X, y = iris.data, iris.target
-    dt = IVEstimatorDataset(Y = y, X_c = X)
+    dt = EstimatorDataset(Y = y, X_c = X)
     return dt
 
 @pytest.fixture
 def iris_dataset_discrete():
-    """Returns IVEstimatorDataset with iris loaded and last column set as discrete"""
+    """Returns EstimatorDataset with iris loaded and last column set as discrete"""
     iris = load_iris()
     X, y = iris.data, iris.target
     X_c = X[:,:3]
     X_d = X[:,3]
-    dt = IVEstimatorDataset(Y = y, X_c = X_c, X_d = X_d)
+    dt = EstimatorDataset(Y = y, X_c = X_c, X_d = X_d)
     return dt
 
 def test_estimate_nodiscrete_skl(iris_dataset):

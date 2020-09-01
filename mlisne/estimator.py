@@ -13,10 +13,10 @@ import pandas as pd
 import scipy.stats as stats
 from prettytable import PrettyTable
 
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 from mlisne.helpers import run_onnx_session
 
-class TreatmentIVEstimator(BaseEstimator):
+class TreatmentEffectsEstimator(BaseEstimator):
     """Class to estimate treatment effects using 2SLS method
 
     The `fit` class method estimates the following equations
@@ -38,12 +38,12 @@ class TreatmentIVEstimator(BaseEstimator):
         self.__fitted = None
         self.__fit = False
         self.__postest = None
-    def fit(self, data: IVEstimatorDataset, qps: np.ndarray, single_nondegen: bool = False) -> None:
+    def fit(self, data: EstimatorDataset, qps: np.ndarray, single_nondegen: bool = False) -> None:
         """Fit estimator
 
         Parameters
         -----------
-        data: IVEstimatorDataset
+        data: EstimatorDataset
             Dataset class loaded with Y, Z, D, and X
         qps: array-like, shape(n_sample,)
             Estimated quasi propensity scores for each observation
@@ -345,12 +345,12 @@ class CounterfactualMLEstimator(BaseEstimator):
         self.__fitted = None
         self.__fit = False
         self.__postest = None
-    def fit(self, data: IVEstimatorDataset, qps: np.ndarray, cov_type: str = "unadjusted") -> None:
+    def fit(self, data: EstimatorDataset, qps: np.ndarray, cov_type: str = "unadjusted") -> None:
         """Fit OLS estimator
 
         Parameters
         -----------
-        data: IVEstimatorDataset
+        data: EstimatorDataset
             Dataset class loaded with Y, Z, D, and X
         qps: array-like, shape(n_sample,)
             Estimated quasi propensity scores for each observation

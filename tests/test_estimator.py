@@ -12,9 +12,9 @@ from pathlib import Path
 from linearmodels.iv import IV2SLS
 import statsmodels.api as sm
 
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 from mlisne.qps import estimate_qps
-from mlisne.estimator import TreatmentIVEstimator, CounterfactualMLEstimator
+from mlisne.estimator import TreatmentEffectsEstimator, CounterfactualMLEstimator
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")
@@ -24,7 +24,7 @@ data_path = str(Path(__file__).resolve().parents[1] / "examples" / "data")
 
 @pytest.fixture
 def empty_estimator():
-    est = TreatmentIVEstimator()
+    est = TreatmentEffectsEstimator()
     return est
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def test_all_empty(empty_estimator):
 
 def test_iris_estimation(empty_estimator, iris_data):
     data = np.array(iris_data.drop(['Y0', 'Y1'], axis=1))
-    dataset = IVEstimatorDataset(data)
+    dataset = EstimatorDataset(data)
     qps = estimate_qps(dataset, f"{model_path}/iris_logreg.onnx")
     empty_estimator.fit(dataset, qps)
 
@@ -140,7 +140,7 @@ def test_cf_all_empty(empty_cf_estimator):
 
 def test_counterfactual_estimation(iris_data, empty_cf_estimator):
     data = np.array(iris_data.drop(['Y0', 'Y1'], axis=1))
-    dataset = IVEstimatorDataset(data)
+    dataset = EstimatorDataset(data)
     qps = estimate_qps(dataset, f"{sklearn_logreg}", types=(np.float32,None))
     empty_cf_estimator.fit(dataset, qps)
 

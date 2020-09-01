@@ -84,19 +84,19 @@ Below is a general example of how to use the modules in this package to estimate
 import pandas as pd
 import numpy as np
 import onnxruntime as rt
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 from mlisne.qps import estimate_qps
-from mlisne.estimator import TreatmentIVEstimator
+from mlisne.estimator import TreatmentEffectsEstimator
 
 # Read and load data
 data = pd.read_csv("path_to_your_historical_data.csv")
-iv_data = IVEstimatorDataset(data)
+iv_data = EstimatorDataset(data)
 
 # Estimate QPS with 100 draws and ball radius 0.8
 qps = estimate_qps(iv_data, S=100, delta=0.8, ML_onnx="path_to_onnx_model.onnx")
 
 # Fit 2SLS Estimation model
-estimator = TreatmentIVEstimator()
+estimator = TreatmentEffectsEstimator()
 estimator.fit(iv_data, qps)
 
 # Prints estimation results
@@ -109,28 +109,28 @@ estimator.varcov # Variance covariance matrix
 In general the pipeline has three main steps: loading, QPS estimation, and IV estimation. 
 
 ## Data Loading
-The IVEstimatorDataset class is the main data loader for the rest of the pipeline. It splits the data into individual arrays of the outcome `Y`, treatment assignment `D`, algorithmic recommendation `Z`, continuous inputs `X_c`, and discrete inputs `X_d`. The module can be initialized by passing in a pandas dataframe or numpy array with associated indices, or the variables can be individually assigned. 
+The EstimatorDataset class is the main data loader for the rest of the pipeline. It splits the data into individual arrays of the outcome `Y`, treatment assignment `D`, algorithmic recommendation `Z`, continuous inputs `X_c`, and discrete inputs `X_d`. The module can be initialized by passing in a pandas dataframe or numpy array with associated indices, or the variables can be individually assigned. 
 
 ```python
 import pandas as pd
 import numpy as np
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 
 data = pd.read_csv("path_to_your_historical_data.csv")
 
 # We can initialize the dataset by passing in the entire dataframe with indicator indices
-iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2, X_c=range(3,6), X_d=range(6,9))
+iv_data = EstimatorDataset(data, Y=0, Z=1, D=2, X_c=range(3,6), X_d=range(6,9))
 
 # We can also load the data post-initialization
-iv_data = IVEstimatorDataset()
+iv_data = EstimatorDataset()
 iv_data.load_data(Y=data['Y'], Z=data['Z'], D=data['D'], X_c=data.iloc[:,3:6], X_d=data.iloc[:,6:9])
 
 # Indices that are not passed will be inferred from the remaining columns
-iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2, X_c=range(3,6)) 
+iv_data = EstimatorDataset(data, Y=0, Z=1, D=2, X_c=range(3,6)) 
 iv_data.X_d # data.iloc[:,6:9]
 
 # If neither X_c nor X_d indices are given, then the input data is assumed to be all continuous
-iv_data = IVEstimatorDataset(data, Y=0, Z=1, D=2) 
+iv_data = EstimatorDataset(data, Y=0, Z=1, D=2) 
 # "UserWarning: Neither continuous nor discrete indices were explicitly given. We will assume all covariates in data are continuous."
 
 # We can also overwrite individual variables with the `load_data` function
@@ -143,7 +143,7 @@ The data loader is also equipped to handle mixed variables (variables that have 
 ```python
 import pandas as pd
 import numpy as np
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 
 data = pd.read_csv("path_to_your_historical_data.csv")
 
@@ -151,14 +151,14 @@ data = pd.read_csv("path_to_your_historical_data.csv")
 L = {0: {0}, 3: {5, 10}} # This indicates that the 0th and 3rd index continuous variables are mixed variables with the passed discrete parts
 
 # Initialization 
-iv_data = IVEstimatorDataset(data, L = L)
+iv_data = EstimatorDataset(data, L = L)
 
 # L can also be assigned directly 
 iv_data.L = L
 ```
 
 ## QPS Estimation 
-The main QPS estimation functions are `estimate_qps`, `estimate_qps_with_decision_function`, and `estimate_qps_user_defined`, each serving different algorithmic use-cases. `estimate_qps` serves the case when the immediate output of an ONNX model serves as the treatment recommendation. `estimate_qps_with_decision_function` serves the case when an additional decision function is passed to process the ML outputs. `estimate_qps_user_defined` serves the case when the user has a custom function that outputs treatment recommendations. In general, all the functions require as input `X` an IVEstimatorDataset, `S` the number of draws per estimate, and `delta` the radius of the ball. Please refer to the documentation for the full list of keyword arguments.
+The main QPS estimation functions are `estimate_qps`, `estimate_qps_with_decision_function`, and `estimate_qps_user_defined`, each serving different algorithmic use-cases. `estimate_qps` serves the case when the immediate output of an ONNX model serves as the treatment recommendation. `estimate_qps_with_decision_function` serves the case when an additional decision function is passed to process the ML outputs. `estimate_qps_user_defined` serves the case when the user has a custom function that outputs treatment recommendations. In general, all the functions require as input `X` an EstimatorDataset, `S` the number of draws per estimate, and `delta` the radius of the ball. Please refer to the documentation for the full list of keyword arguments.
 
 ```python
 import pandas as pd
@@ -211,13 +211,13 @@ qps = estimate_qps_user_defined(iris_dataset_discrete, ml_round, c = 0.5)
 ```
 
 ## IV Estimation
-Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. The TreatmentIVEstimator applies the 2SLS method to fit the model. Post-estimation diagnostics and statistics are accessible directly from the estimator. Please see the documentation for the full list of available statistics.
+Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. The TreatmentEffectsEstimator applies the 2SLS method to fit the model. Post-estimation diagnostics and statistics are accessible directly from the estimator. Please see the documentation for the full list of available statistics.
 ```python
 import pandas as pd
 import numpy as np
-from mlisne.estimator import TreatmentIVEstimator
+from mlisne.estimator import TreatmentEffectsEstimator
 
-est = TreatmentIVEstimator()
+est = TreatmentEffectsEstimator()
 est.fit(iv_data, qps)
 print(est) 
 

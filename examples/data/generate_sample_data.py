@@ -8,7 +8,7 @@ from sklearn.datasets import load_iris
 import onnxruntime as rt
 from pathlib import Path
 
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 from mlisne.helpers import estimate_qps
 
 

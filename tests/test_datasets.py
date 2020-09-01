@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from mlisne.dataset import IVEstimatorDataset
+from mlisne.dataset import EstimatorDataset
 
 
 
 def test_empty_initialization():
-    dt = IVEstimatorDataset()
+    dt = EstimatorDataset()
     attr = ['Y', 'Z', 'D', 'X_c', 'X_d']
     for key in attr:
         assert dt.__dict__[key] is None
@@ -19,7 +19,7 @@ def test_empty_initialization():
 def test_np_inference_initialization():
     cts_np = np.array(["Y", "Z", "D", 1, 2, 3, 4, 5])
     cts_np = np.tile(cts_np, (20,1))
-    dt = IVEstimatorDataset(cts_np)
+    dt = EstimatorDataset(cts_np)
     assert all(dt.Y == np.array(["Y"]*20))
     assert all(dt.Z == np.array(["Z"]*20))
     assert all(dt.D == np.array(["D"]*20))
@@ -30,7 +30,7 @@ def test_np_index_initialization():
     cts_np = np.array([1, "Y", 2, "Z", 3, "D", 4, 5])
     cts_np = np.tile(cts_np, (20,1))
     C = [0,2,4,6]
-    dt = IVEstimatorDataset(cts_np, X_c = C)
+    dt = EstimatorDataset(cts_np, X_c = C)
     assert all(dt.Y == np.array(["Y"]*20))
     assert all(dt.Z == np.array(["Z"]*20))
     assert all(dt.D == np.array(["D"]*20))
@@ -39,7 +39,7 @@ def test_np_index_initialization():
 
 def test_df_inference_initialization():
     cts_df = pd.DataFrame({"Y":["Y"]*20, "Z":["Z"]*20, "D":["D"]*20, "1":[1]*20,"2":[2]*20, "3":[3]*20})
-    dt = IVEstimatorDataset(cts_df)
+    dt = EstimatorDataset(cts_df)
     assert all(dt.Y == np.array(["Y"]*20))
     assert all(dt.Z == np.array(["Z"]*20))
     assert all(dt.D == np.array(["D"]*20))
@@ -49,7 +49,7 @@ def test_df_inference_initialization():
 def test_df_index_initialization():
     cts_df = pd.DataFrame({"Y":["Y"]*20, "Z":["Z"]*20, "D":["D"]*20, "1":[1]*20,"2":[2]*20, "3":[3]*20})
     C = (3,5)
-    dt = IVEstimatorDataset(cts_df, X_c = C)
+    dt = EstimatorDataset(cts_df, X_c = C)
     assert all(dt.Y == np.array(["Y"]*20))
     assert all(dt.Z == np.array(["Z"]*20))
     assert all(dt.D == np.array(["D"]*20))
@@ -59,7 +59,7 @@ def test_df_index_initialization():
 def test_str_initialization():
     sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "iris_data.csv"
     C = range(4,8)
-    dt = IVEstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C)
+    dt = EstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C)
 
     validate_df = pd.read_csv(sample_data_path)
     assert all(dt.Y == np.array(validate_df['Y']))
@@ -71,7 +71,7 @@ def test_str_initialization():
 def test_overwrite():
     cts_np = np.array(["Y", "Z", "D", 1, 2, 3, 4, 5])
     cts_np = np.tile(cts_np, (20,1))
-    dt = IVEstimatorDataset(cts_np)
+    dt = EstimatorDataset(cts_np)
 
     Y_new = np.array(["Y_new"]*20)
     Z_new = pd.Series(["Z_new"]*20)
@@ -89,7 +89,7 @@ def test_mixed_variables():
     sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "iris_data.csv"
     C = range(4,8)
     L = {1:{3,4}}
-    dt = IVEstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)
+    dt = EstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)
 
     validate_df = pd.read_csv(sample_data_path)
     assert all(dt.Y == np.array(validate_df['Y']))
@@ -104,4 +104,4 @@ def test_mixed_value_error():
     C = range(4,8)
     L = {4:{3,4}}
     with pytest.raises(ValueError):
-        dt = IVEstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)
+        dt = EstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)

@@ -17,7 +17,7 @@ The mlisne package is an implementation of the treatment effect estimation metho
 
 The pipeline consists of the following main modules:
 
-- **dataset module**: This module provides the ``IVEstimatorDataset`` class to load and preprocess the historical treatment data for treatment effect estimation.
+- **dataset module**: This module provides the ``EstimatorDataset`` class to load and preprocess the historical treatment data for treatment effect estimation.
 - **qps module**: This module provides the functions for efficient QPS estimation with both ONNX and custom user function support.
 - **estimator module**: This module provides the estimator interfaces for treatment effect estimation as well as counterfactual value estimation.
 

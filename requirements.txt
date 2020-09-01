@@ -6,4 +6,3 @@ onnxruntime>=1.4.0
 pandas>=1.0.5
 prettytable>=0.7.2
 pydantic>=1.6.1
-sphinx<=3.2.1

@@ -1,4 +1,5 @@
 """Estimator classes"""
+
 from abc import ABC, abstractmethod
 from pydantic.dataclasses import dataclass # Use pydantic for runtime type-checking
 from dataclasses import InitVar

@@ -1,4 +1,5 @@
 """Dataset classes"""
+
 from abc import ABC, abstractmethod
 from pydantic.dataclasses import dataclass # Use pydantic for runtime type-checking
 from pydantic import validator

@@ -1,5 +1,4 @@
 """QPS estimation functions"""
-
 from pathlib import Path
 from typing import Tuple, Dict, Set, Union, Sequence, Optional
 import onnxruntime as rt

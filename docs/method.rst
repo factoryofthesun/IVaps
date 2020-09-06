@@ -33,7 +33,7 @@ We then can define QPS as follows.
 
 Intuitively, QPS at :math:`x` is the average probability of a treatment recommendation in a shrinking neighborhood of :math:`x`. To make common :math:`\delta` for all dimensions reasonable, we normalize :math:`X_{ij}` to have mean zero and variance one for each :math:`j=1,...,p`.
 
-.. image:: ../images/QPS_chart.png
+.. image:: ./_images/QPS_chart.png
   :align: center
   :width: 350
   :height: 250
@@ -50,12 +50,10 @@ There are 3 key assumptions that allow us to make our identification claim.
 3. Local Mean Continuity: For :math:`z\in\{0,1\}`, the conditional expectation functions :math:`E[Y_{zi}|X_i]` and :math:`E[D_i(z)|X_i]` are continuous at any point :math:`x\in {\cal X}` such that :math:`p^{ML}(x)\in (0,1)` and :math:`ML(x)\in \{0,1\}`.
 
 From these 3 assumptions we can make the following identification proposition.
-
 Under Assumptions 1-3,
 
 1. :math:`E[Y_{1i}-Y_{0i}| X_i=x]` and :math:`E[D_i(1)-D_i(0)| X_i=x]` are identified for every :math:`x\in {\cal X}` such that :math:`p^{ML}(x)\in (0,1)`.
-2. Let :math:`A` be any open subset of :math:`{\cal X}` such that :math:`p^{ML}(x)` exists for all :math:`x\in A`.
-	 Then either :math:`E[Y_{1i}-Y_{0i}| X_i \in A]` or :math:`E[D_i(1)-D_i(0)| X_i \in A]`, or both are identified only if :math:`p^{ML}(x)\in (0,1)` for almost every :math:`x\in A` (with respect to the Lebesgue measure).
+2. Let :math:`A` be any open subset of :math:`{\cal X}` such that :math:`p^{ML}(x)` exists for all :math:`x\in A`. Then either :math:`E[Y_{1i}-Y_{0i}| X_i \in A]` or :math:`E[D_i(1)-D_i(0)| X_i \in A]`, or both are identified only if :math:`p^{ML}(x)\in (0,1)` for almost every :math:`x\in A` (with respect to the Lebesgue measure).
 
 This proposition suggests that by conditioning on QPS, ML-based treatment recommendations are quasi-randomly assigned. We can thus make use of ML treatment recommendations as an instrument for treatment assignment, conditional on QPS. There are several methods for applying instrumental variables in estimating causal treatment effects, and the one we implement in this package is the Two Stage Least Squares method, though it is certainly possible other methods are added in the future.
 
@@ -148,34 +146,45 @@ Reinforcement Learning and Bandit
 
 We are constantly exposed to digital information (movie, music, news, search results, advertisements, and recommendations) through a variety of devices and platforms. Tech companies allocate these pieces of content by using reinforcement learning and bandit algorithms. Our method is also applicable to many popular bandit and reinforcement learning algorithms. For simplicity, assume that individuals perfectly comply with the treatment assignment :math:`(D_i=Z_i)`.
 
-.. math::
-	\begin{enumerate}[align=left, leftmargin=0pt, labelindent=0pt,listparindent=0pt, labelwidth=0pt, itemindent=!]
+1. Bandit Algorithms
 
-	\item (Bandit Algorithms)
-	The algorithms below first use past data and supervised learning to estimate the conditional means and variances of potential outcomes, $E[Y_i(z)|X_i]$ and $\Var(Y_i(z)|X_i)$, for each $z\in \{0, 1\}$.
-	Let $\mu_z(X_i)$ and $\sigma^2_z(X_i)$ denote the estimators.
-	The algorithms then use $\mu_z(X_i)$ and $\sigma^2_z(X_i)$ to determine the treatment assignment for individual $i$.
+The algorithms below first use past data and supervised learning to estimate the conditional means and variances of potential outcomes, :math:`E[Y_i(z)|X_i]` and :math:`\Var(Y_i(z)|X_i)`, for each :math:`z\in \{0, 1\}`.
+Let :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` denote the estimators.
+The algorithms then use :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` to determine the treatment assignment for individual :math:`i`.
 
-	\begin{enumerate}[label=(\alph*)]
-		\item (Thompson Sampling Using Gaussian Priors)
+	A. Thompson Sampling Using Gaussian Priors
 
-	  The algorithm first samples potential outcomes from the normal distribution with mean $(\mu_0(X_i), \mu_1(X_i))$ and variance covariance matrix ${\rm diag}(\sigma^2_0(X_i), \sigma^2_1(X_i))`. The algorithm then chooses the treatment with the highest sampled potential outcome. As a result, this algorithm chooses the treatment assignment as follows:
-		$$
+	The algorithm first samples potential outcomes from the normal distribution with mean :math:`(\mu_0(X_i), \mu_1(X_i))` and variance covariance matrix :math:`{\rm diag}(\sigma^2_0(X_i), \sigma^2_1(X_i))`. The algorithm then chooses the treatment with the highest sampled potential outcome. As a result, this algorithm chooses the treatment assignment as follows:
+
+	.. math::
+
 		Z^{TS}_i \equiv \argmax_{z\in \{0, 1\}}y(z), ~~ML^{TS}(X_i)= E[\argmax_{z\in \{0, 1\}}y(z)|X_i]
-		$$
-		where $y(z)\sim {\cal N}(\mu_z(X_i), \sigma^2_z(X_i))$ independently across $z$.
 
-		The function $ML$ has an analytical expression:
-		$$ML^{TS}(x)=1-\Phi(\dfrac{\mu_0(x)-\mu_1(x)}{\sqrt{\sigma^2_0(x)+\sigma^2_1(x)}}),$$
-		where $\Phi$ is the CDF of a standard normal distribution.
-		Suppose that the functions $\mu_0$, $\mu_1$, $\sigma^2_0$ and $\sigma^2_1$ are continuous on ${\rm int}({\cal X})$.
-		QPS for this case is given by
-		$$p^{TS}(x)=1-\Phi(\dfrac{\mu_0(x)-\mu_1(x)}{\sqrt{\sigma^2_0(x)+\sigma^2_1(x)}})$$
-		for any $x\in {\rm int}({\cal X})$. This QPS is non-degenerate, meaning that the data from the algorithms allow for causal-effect identification.
+	where :math:`y(z)\sim {\cal N}(\mu_z(X_i), \sigma^2_z(X_i))` independently across :math:`z`.
 
-		\item (Upper Confidence Bound, UCB)
-		Unlike the above stochastic one, the UCB algorithm is a deterministic algorithm, producing a less obvious example of our framework.
-		This algorithm chooses the treatment with the highest upper confidence bound for the potential outcome:
+	The function :math:`ML` has an analytical expression:
+
+	.. math::
+
+		ML^{TS}(x)=1-\Phi(\dfrac{\mu_0(x)-\mu_1(x)}{\sqrt{\sigma^2_0(x)+\sigma^2_1(x)}})
+
+	where :math:`\Phi` is the CDF of a standard normal distribution.
+	Suppose that the functions :math:`\mu_0`, :math:`\mu_1`, :math:`\sigma^2_0` and :math:`\sigma^2_1` are continuous on :math:`{\rm int}({\cal X})`.
+	QPS for this case is given by
+
+	.. math::
+
+		p^{TS}(x)=1-\Phi(\dfrac{\mu_0(x)-\mu_1(x)}{\sqrt{\sigma^2_0(x)+\sigma^2_1(x)}})
+
+	for any :math:`x\in {\rm int}({\cal X})`. This QPS is non-degenerate, meaning that the data from the algorithms allow for causal-effect identification.
+
+	B. Upper Confidence Bound, UCB
+
+	Unlike the above stochastic one, the UCB algorithm is a deterministic algorithm, producing a less obvious example of our framework.
+	This algorithm chooses the treatment with the highest upper confidence bound for the potential outcome:
+
+	.. math::
+
 		\begin{align*}
 			Z^{UCB}_i &\equiv \argmax_{z=0, 1}	\{\mu_z(X_i)+\alpha(X_i) \sigma_z(X_i)\},\\
 			ML^{UCB}(x) &=\begin{cases}
@@ -183,42 +192,55 @@ We are constantly exposed to digital information (movie, music, news, search res
 				1 & \ \ \ \text{if $\mu_1(x)+\alpha(x)\sigma_1(x)>\mu_0(x)+\alpha(x)\sigma_0(x)$},
 			\end{cases}
 		\end{align*}
-		where $\alpha(x)$ is chosen so that $|\mu_z(x)-E[Y_i(z)|X_i=x]|\le \alpha(x) \sigma_z(x)$ at least with some probability, for example, $0.95$, for each $x$.
-		Suppose that the function $\mu_1-\mu_0+\alpha (\sigma_1-\sigma_0)$ satisfies the conditions imposed on risk score function $r$ in the :ref:`supervised-learning` example with $c=0$.
-		QPS for this case is given by
-		$$p^{UCB}(x)=\begin{cases}
+
+	where :math:`\alpha(x)` is chosen so that :math:`|\mu_z(x)-E[Y_i(z)|X_i=x]|\le \alpha(x) \sigma_z(x)` at least with some probability, for example, :math:`0.95`, for each :math:`x`.
+
+	Suppose that the function :math:`\mu_1-\mu_0+\alpha (\sigma_1-\sigma_0)` satisfies the conditions imposed on risk score function :math:`r` in the :ref:`supervised-learning` example with :math:`c=0`.
+
+	QPS for this case is given by
+
+	.. math::
+
+		p^{UCB}(x)=\begin{cases}
 		0 & \ \ \ \text{if $\mu_1(x)+\alpha(x)\sigma_1(x)<\mu_0(x)+\alpha(x)\sigma_0(x)$}\\
 		0.5 & \ \ \ \text{if $\mu_1(x)+\alpha(x)\sigma_1(x)=\mu_0(x)+\alpha(x)\sigma_0(x)$ and $x\in {\rm int}({\cal X})$}\\
 		1 & \ \ \ \text{if $\mu_1(x)+\alpha(x)\sigma_1(x)>\mu_0(x)+\alpha(x)\sigma_0(x)$}.
-		\end{cases}$$
-		This means that the UCB algorithm produces potentially complicated quasi-experimental variation along the boundary in the covariates space where the algorithm's treatment recommendation changes from one to the other. It is possible to identify and estimate causal effects across the boundary.
-	\end{enumerate}
+		\end{cases}
 
-	\item (Reinforcement Learning Algorithms)
-	Extending bandit algorithms to dynamically changing environments, reinforcement learning algorithms optimize decisions in dynamic environments, where the state (the set of observables that the agent receives from the environment) and action in the current period can affect the future states and outcomes.
-	Let $\{(X_{ti}, Z_{ti}, Y_{ti})\}_{t=0}^\infty$ denote the trajectory of the states, treatment assignments, and outcomes in periods $t=0,1,2,\cdots$ for individual $i$.
-	For simplicity, we assume that the trajectory follows a Markov decision process, where the distribution of the state $X_{ti}$ only depends on the last state and treatment assignment $(X_{t-1,i}, Z_{t-1,i})$, the distribution of the outcome $Y_{ti}$ only depends on the current state and treatment assignment $(X_{ti}, Z_{ti})$, and these distributions are stationary over periods.
-	Let $Y_{ti}(1)$ and $Y_{ti}(0)$ represent the potential outcomes in period $t$.
-	Let $Q:{\cal X}\times \{0,1\}\rightarrow \mathbb{R}$ be the optimal state-action value function, called the {\it $Q$-function}: for $(x,z)\in {\cal X}\times \{0,1\}$,
-	$$
-	Q(x,z)\equiv\max_{\pi: {\cal X}\rightarrow [0,1]}E[\sum_{t=0}^\infty\gamma^{t}(Y_{ti}(1)\pi(X_{ti})+Y_{ti}(0)(1-\pi(X_{ti}))|X_{0i}=x, Z_{0i}=z],
-	$$
-	where $\gamma\in [0,1)$ is a discount factor, and $\pi$ is a policy function that assigns the probability of treatment to each possible state.
+	This means that the UCB algorithm produces potentially complicated quasi-experimental variation along the boundary in the covariates space where the algorithm's treatment recommendation changes from one to the other. It is possible to identify and estimate causal effects across the boundary.
 
-	\begin{enumerate}[label=(\alph*)]
+2. Reinforcement Learning Algorithms
 
-		\item (Fitted $Q$ Iteration with $\epsilon$-Greedy)
-		The fitted $Q$ iteration algorithm is a batch reinforcement learning algorithm that uses past data to yield an approximation of the $Q$-function.
-		Suppose that we have collected a set of $L$ four-tuples $\{(x_{t_l}^l, z_{t_l}^l, y_{t_l}^l, x_{t_l+1}^l): l=1,...,L\}$ as a result of the agent interacting with the dynamic environment.
-		Given $\{(x_{t_l}^l, z_{t_l}^l, y_{t_l}^l, x_{t_l+1}^l): l=1,...,L\}$ and an initial approximation $\hat Q$ of $Q$ (e.g., $\hat Q(x,z)=0$ for all $(x,z)$), the algorithm repeats the following steps until some stopping condition is reached:
-		\begin{enumerate}
-			\item For each $l=1,...,L$, calculate $q^l=y_{t_l}^l+\gamma\max_{z\in \{0,1\}}\hat Q(x_{t_l+1}^l,z)$.
-			\item Use $\{(x_{t_l}^l, z_{t_l}^l, q^l): l=1,...,L\}$ and a supervised learning method to train a model that predicts $q$ from $(x,z)$. Let the model be a new approximation $\hat Q$ of $Q$.
-		\end{enumerate}
-		Possible supervised learning methods used in the second step include tree-based methods, neural networks and deep neural networks.
+Extending bandit algorithms to dynamically changing environments, reinforcement learning algorithms optimize decisions in dynamic environments, where the state (the set of observables that the agent receives from the environment) and action in the current period can affect the future states and outcomes.
+Let :math:`\{(X_{ti}, Z_{ti}, Y_{ti})\}_{t=0}^\infty` denote the trajectory of the states, treatment assignments, and outcomes in periods :math:`t=0,1,2,\cdots` for individual :math:`i`.
+For simplicity, we assume that the trajectory follows a Markov decision process, where the distribution of the state :math:`X_{ti}` only depends on the last state and treatment assignment :math:`(X_{t-1,i}, Z_{t-1,i})`, the distribution of the outcome :math:`Y_{ti}` only depends on the current state and treatment assignment :math:`(X_{ti}, Z_{ti})`, and these distributions are stationary over periods.
+Let :math:`Y_{ti}(1)` and :math:`Y_{ti}(0)` represent the potential outcomes in period :math:`t`.
+Let :math:`Q:{\cal X}\times \{0,1\}\rightarrow \mathbb{R}` be the optimal state-action value function, called the *Q-function*: for :math:`(x,z)\in {\cal X}\times \{0,1\}`,
 
-		The algorithm then uses the estimated $Q$-function to determine the treatment assignment for newly arriving individuals.
-		One standard assignment rule is the $\epsilon$-Greedy algorithm, which chooses the best treatment based on $\hat Q(X_{ti}, z)$ with probability $1-\frac{\epsilon}{2}$ and chooses the other treatment with probability $\frac{\epsilon}{2}$: for each $t$,
+.. math::
+
+	Q(x,z)\equiv\max_{\pi: {\cal X}\rightarrow [0,1]}E[\sum_{t=0}^\infty\gamma^{t}(Y_{ti}(1)\pi(X_{ti})+Y_{ti}(0)(1-\pi(X_{ti}))|X_{0i}=x, Z_{0i}=z]
+
+where :math:`\gamma\in [0,1)` is a discount factor, and :math:`\pi` is a policy function that assigns the probability of treatment to each possible state.
+
+	A. Fitted :math:`Q` Iteration with :math:`\epsilon`-Greedy
+
+	The fitted :math:`Q` iteration algorithm is a batch reinforcement learning algorithm that uses past data to yield an approximation of the :math:`Q`-function.
+
+	Suppose that we have collected a set of :math:`L` four-tuples :math:`\{(x_{t_l}^l, z_{t_l}^l, y_{t_l}^l, x_{t_l+1}^l): l=1,...,L\}` as a result of the agent interacting with the dynamic environment.
+
+	Given :math:`\{(x_{t_l}^l, z_{t_l}^l, y_{t_l}^l, x_{t_l+1}^l): l=1,...,L\}` and an initial approximation :math:`\hat Q` of :math:`Q` (e.g., :math:`\hat Q(x,z)=0` for all :math:`(x,z)`), the algorithm repeats the following steps until some stopping condition is reached:
+
+		1. For each :math:`l=1,...,L`, calculate :math:`q^l=y_{t_l}^l+\gamma\max_{z\in \{0,1\}}\hat Q(x_{t_l+1}^l,z)`.
+		2. Use :math:`\{(x_{t_l}^l, z_{t_l}^l, q^l): l=1,...,L\}:math:` and a supervised learning method to train a model that predicts :math:`q` from :math:`(x,z)`. Let the model be a new approximation :math:`\hat Q` of :math:`Q`.
+
+	Possible supervised learning methods used in the second step include tree-based methods, neural networks and deep neural networks.
+
+	The algorithm then uses the estimated :math:`Q`-function to determine the treatment assignment for newly arriving individuals.
+	One standard assignment rule is the :math:`\epsilon`-Greedy algorithm, which chooses the best treatment based on :math:`\hat Q(X_{ti}, z)` with probability :math:`1-\frac{\epsilon}{2}` and chooses the other treatment with probability :math:`\frac{\epsilon}{2}`: for each :math:`t`,
+
+	.. math::
+
 		\begin{align*}
 		Z^{\epsilon}_{ti}&\equiv \begin{cases}
 		\argmax_{z=0, 1}\hat Q(X_{ti}, z) & \ \ \ \text{with probability $1-\frac{\epsilon}{2}$}\\
@@ -230,37 +252,45 @@ We are constantly exposed to digital information (movie, music, news, search res
 		\end{cases}
 		\end{align*}
 
-		Suppose that the function $\hat Q(\cdot,1)-\hat Q(\cdot,0)$ satisfies the condition imposed on $r$ in the :ref:`supervised-learning` example with $c=0$.
-		QPS for this case is given by
-		$$p^{\epsilon}(x)=\begin{cases}
+	Suppose that the function :math:`\hat Q(\cdot,1)-\hat Q(\cdot,0)` satisfies the condition imposed on :math:`r` in the :ref:`supervised-learning` example with :math:`c=0`.
+	QPS for this case is given by
+
+	.. math::
+
+		p^{\epsilon}(x)=\begin{cases}
 		\frac{\epsilon}{2} & \ \ \ \text{if $\hat Q(x,1)<\hat Q(x,0)$}\\
 		0.5 & \ \ \ \text{if $\hat Q(x,1)=\hat Q(x,0)$ and $x\in {\rm int}({\cal X})$}\\
 		1-\frac{\epsilon}{2} & \ \ \ \text{if $\hat Q(x,1)>\hat Q(x,0)$}.
-		\end{cases}$$
+		\end{cases}
 
-		\item (Policy Gradient Methods)
+	B. Policy Gradient Methods
+
 		Policy gradient methods such as REINFORCE approximate the optimal policy function by parametrization and learn the parameter using stochastic gradient ascent.
-		Let $\pi(x;\theta)$ be a parametrization of the policy function that is differentiable with respect to $\theta$.
-		For example, $\pi$ might be a softmax function with a linear index: $\pi(x;\theta)=\frac{\exp(x'\theta)}{1+\exp(x'\theta)}$.
-		Another example is a neural network whose input is a representation of the state $x$, whose output is the treatment assignment probability, and whose weights are represented by the parameter $\theta$.
+		Let :math:`\pi(x;\theta)` be a parametrization of the policy function that is differentiable with respect to :math:`\theta`.
+		For example, :math:`\pi` might be a softmax function with a linear index: :math:`\pi(x;\theta)=\frac{\exp(x'\theta)}{1+\exp(x'\theta)}`.
+		Another example is a neural network whose input is a representation of the state :math:`x`, whose output is the treatment assignment probability, and whose weights are represented by the parameter :math:`\theta`.
 
-		Suppose that we have collected a set of $L$ trajectories $\{\{(x_{t}^l, z_{t}^l, y_{t}^l)\}_{t=0}^{T_l}: l=1,...,L\}$ by running the policy $\pi(x;\theta^0)$ for $L$ individuals.
-		Policy gradient methods such as REINFORCE Actor-Critic Methods use the trajectories to update the policy parameter to $\theta_1$ by stochastic gradient ascent. The algorithms then use the updated policy function $\pi(x;\theta^1)$ to determine the treatment assignment for new episodes. For each $t$,
-		\begin{align*}
-		Z^{PG}_{ti}&\equiv \begin{cases}
-		1 & \ \ \ \text{with probability $\pi(X_{ti};\theta^1)$}\\
-		0 & \ \ \ \text{with probability $1-\pi(X_{ti};\theta^1)$},
-		\end{cases}\\
-		ML^{TG}(x)&= \pi(x;\theta^1).
-		\end{align*}
-		Suppose that the function $\pi(\cdot;\theta^1)$ is continuous on ${\rm int}({\cal X})$.
+		Suppose that we have collected a set of :math:`L` trajectories :math:`\{\{(x_{t}^l, z_{t}^l, y_{t}^l)\}_{t=0}^{T_l}: l=1,...,L\}` by running the policy :math:`\pi(x;\theta^0)` for :math:`L` individuals.
+		Policy gradient methods such as REINFORCE Actor-Critic Methods use the trajectories to update the policy parameter to :math:`\theta_1` by stochastic gradient ascent. The algorithms then use the updated policy function :math:`\pi(x;\theta^1)` to determine the treatment assignment for new episodes. For each :math:`t`,
+
+		.. math::
+
+			\begin{align*}
+			Z^{PG}_{ti}&\equiv \begin{cases}
+			1 & \ \ \ \text{with probability $\pi(X_{ti};\theta^1)$}\\
+			0 & \ \ \ \text{with probability $1-\pi(X_{ti};\theta^1)$},
+			\end{cases}\\
+			ML^{TG}(x)&= \pi(x;\theta^1).
+			\end{align*}
+
+		Suppose that the function :math:`\pi(\cdot;\theta^1)` is continuous on :math:`{\rm int}({\cal X})`.
 		QPS for this case is given by
-		$$
-		p^{TG}(x)= \pi(x;\theta^1)
-		$$
-		for any $x\in {\rm int}({\cal X})$.
-	\end{enumerate}
-	\end{enumerate}
+
+		.. math::
+
+			p^{TG}(x)= \pi(x;\theta^1)
+
+		for any :math:`x\in {\rm int}({\cal X})`.
 
 Unsupervised Learning
 ~~~~~~~~~~~~~~~~~~~~~

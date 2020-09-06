@@ -33,7 +33,7 @@ We then can define QPS as follows.
 
 Intuitively, QPS at :math:`x` is the average probability of a treatment recommendation in a shrinking neighborhood of :math:`x`. To make common :math:`\delta` for all dimensions reasonable, we normalize :math:`X_{ij}` to have mean zero and variance one for each :math:`j=1,...,p`.
 
-.. image:: ./_images/QPS_chart.png
+.. image:: ./_static/QPS_chart.png
   :align: center
   :width: 350
   :height: 250

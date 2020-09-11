@@ -197,7 +197,8 @@ def estimate_qps(X: EstimatorDataset, ML_onnx: str, S: int = 100, delta: float =
     return QPS_vec
 
 def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
-                    X_di: np.ndarray = None, L_ind: np.ndarray = None, L_vals: np.ndarray = None, **kwargs):
+                    X_di: np.ndarray = None, L_ind: np.ndarray = None, L_vals: np.ndarray = None,
+                    pandas:  bool = None, pandas_cols: Sequence = None, **kwargs):
     """Compute QPS for a single row of data, using a user-defined input function.
 
     Quasi-propensity score estimation involves taking draws :math:`X_c^1, \\ldots,X_c^S` from the uniform distribution on :math:`N(X_{ci}, \\delta)`, where :math:`N(X_{ci},\\delta)` is the :math:`p_c` dimensional ball centered at :math:`X_{ci}` with radius :math:`\\delta`.
@@ -255,11 +256,16 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
         X_d_long = np.tile(X_di, (destandard_draws.shape[0], 1))
         inputs = np.append(destandard_draws, X_d_long, axis=1)
 
+    # Create pandas input if specified
+    if pandas:
+        inputs = pd.DataFrame(inputs, columns = pandas_cols)
+
     ml_out = ml(inputs, **kwargs)
     qps = np.mean(ml_out)
     return(qps)
 
-def estimate_qps_user_defined(X: EstimatorDataset, ml, S: int = 100, delta: float = 0.8, seed: int = None, **kwargs):
+def estimate_qps_user_defined(X: EstimatorDataset, ml, S: int = 100, delta: float = 0.8, seed: int = None,
+                              pandas:  bool = None, pandas_cols: Sequence = None, **kwargs):
     """Estimate QPS for given dataset and user defined ML function
 
     Parameters
@@ -322,8 +328,8 @@ def estimate_qps_user_defined(X: EstimatorDataset, ml, S: int = 100, delta: floa
         if L is not None:
             L_ind_i = mixed_og_inds[i]
             L_val_i = mixed_og_vals[i]
-
-        QPS_vec.append(_computeUserQPS(X_c[i,], ml, S, delta, mu, sigma, L_ind = L_ind_i,
-                        L_vals = L_val_i, X_di = X_di, **kwargs)) # Compute QPS for each individual i
+        QPS_vec.append(_computeUserQPS(X_c[i,], ml, S, delta, mu, sigma, X_di, L_ind_i,
+                        L_val_i, pandas, pandas_cols, **kwargs)) # Compute QPS for each individual i
+                        
     QPS_vec = np.array(QPS_vec)
     return QPS_vec

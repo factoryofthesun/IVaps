@@ -95,6 +95,30 @@ def test_user_ml_function(iris_dataset_discrete):
     assert np.all(qps0 == 0)
     assert np.all(qps1 == 1)
 
+def test_user_pandas(iris_dataset_discrete):
+    model = pickle.load(open(f"{model_path}/iris_logreg.pickle", 'rb'))
+
+    # Basic decision function: assign treatment if prediction > c
+    def assign_cutoff(X, c):
+        return (X > c).astype("int")
+
+    # User-defined ML function
+    def ml_round(X, **kwargs):
+        print(f"Pandas columns: {X.columns}")
+        X = X.to_numpy()
+        preds = model.predict_proba(X)
+        treat = assign_cutoff(preds, **kwargs)
+        return treat
+
+    qps = estimate_qps_user_defined(iris_dataset_discrete, ml_round, c = 0.5, pandas = True, pandas_cols = ['C1', 'C2', 'C3', 'C4'])
+    qps0 = estimate_qps_user_defined(iris_dataset_discrete, ml_round, c = 1, pandas = True)
+    qps1 = estimate_qps_user_defined(iris_dataset_discrete, ml_round, c = 0, pandas = True, pandas_cols = ['T1', 'T2', 'T3', 'T4'])
+    print(qps)
+
+    assert qps.shape[0] == iris_dataset_discrete.Y.shape[0]
+    assert np.all(qps0 == 0)
+    assert np.all(qps1 == 1)
+
 def test_cts_nan(iris_dataset_discrete):
     seed = np.random.choice(range(100))
 

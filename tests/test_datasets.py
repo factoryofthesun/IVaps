@@ -35,7 +35,7 @@ def test_np_index_initialization():
     assert all(dt.Z == np.array(["Z"]*20))
     assert all(dt.D == np.array(["D"]*20))
     assert np.array_equal(dt.X_c, np.tile(np.array([1,2,3,4]), (20,1)))
-    assert np.array_equal(dt.X_d, np.array([5]*20))
+    assert np.array_equal(dt.X_d, np.tile(np.array([5]), (20,1)))
 
 def test_df_inference_initialization():
     cts_df = pd.DataFrame({"Y":["Y"]*20, "Z":["Z"]*20, "D":["D"]*20, "1":[1]*20,"2":[2]*20, "3":[3]*20})
@@ -54,7 +54,7 @@ def test_df_index_initialization():
     assert all(dt.Z == np.array(["Z"]*20))
     assert all(dt.D == np.array(["D"]*20))
     assert np.array_equal(dt.X_c, np.tile(np.array([1,3]), (20,1)))
-    assert np.array_equal(dt.X_d, np.array([2]*20))
+    assert np.array_equal(dt.X_d, np.tile(np.array([2]), (20,1)))
 
 def test_str_initialization():
     sample_data_path = Path(__file__).resolve().parents[1] / "examples" / "data" / "iris_data.csv"
@@ -105,3 +105,12 @@ def test_mixed_value_error():
     L = {4:{3,4}}
     with pytest.raises(ValueError):
         dt = EstimatorDataset(sample_data_path, Y=8, Z = 2, D = 3, X_c = C, L=L)
+
+def test_1d_inputs():
+    cts_df = pd.DataFrame({"Y":["Y"]*20, "Z":["Z"]*20, "D":["D"]*20, "1":[1]*20,"2":[2]*20})
+    dt = EstimatorDataset(cts_df, X_d = 4)
+    assert all(dt.Y == np.array(["Y"]*20))
+    assert all(dt.Z == np.array(["Z"]*20))
+    assert all(dt.D == np.array(["D"]*20))
+    assert np.array_equal(dt.X_c, np.tile(np.array([1]), (20,1)))
+    assert np.array_equal(dt.X_d, np.tile(np.array([2]), (20,1)))

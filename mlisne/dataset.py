@@ -139,6 +139,14 @@ class EstimatorDataset(BaseEstimatorDataset):
                 # TODO: Enforce data object type if `data` not passed!
                 val = np.array(val)
                 setattr(self, key, val)
+        # Force X_d and X_c to be 2d
+        if self.X_d is not None:
+            if self.X_d.ndim == 1:
+                self.X_d = self.X_d[:, np.newaxis]
+
+        if self.X_c is not None:
+            if self.X_c.ndim == 1:
+                self.X_c = self.X_c[:, np.newaxis]
 
         # Validation checks
         if self.X_c is not None and self.L is not None:

@@ -13,12 +13,11 @@ Please refer to the section :doc:`method` for a formal introduction to the causa
 MLisNE Pipeline
 ----------------
 
-The mlisne package is an implementation of the treatment effect estimation method described above. This package provides a simple-to-use pipeline for data preprocessing, QPS estimation, and treatment effect estimation that is ML framework-agnostic.
+The mlisne package is an implementation of the treatment effect estimation method described above. This package provides functions for QPS estimation and treatment effect estimation that is ML framework-agnostic.
 
-The pipeline consists of the following main modules:
+The package serves the two key steps for causal effect estimation in this framework:
 
-- **dataset module**: This module provides the ``EstimatorDataset`` class to load and preprocess the historical treatment data for treatment effect estimation.
-- **qps module**: This module provides the functions for efficient QPS estimation with both ONNX and custom user function support.
-- **estimator module**: This module provides the estimator interfaces for treatment effect estimation as well as counterfactual value estimation.
+- **QPS estimation**: This package provides functions for efficient QPS estimation with both ONNX and custom user function support.
+- **IV estimation**: This package provides functions for IV estimation and counterfactual value estimation wrappers that use estimators from the `linearmodels package <https://bashtage.github.io/linearmodels/>`_.
 
-In addition, the helpers module provides additional tools for ONNX assistance, such as a framework agnostic ONNX conversion function and function for executing ONNX runtime sessions.
+In addition, the helpers module provides additional tools for ONNX assistance, such as a framework agnostic ONNX conversion function and a function for executing ONNX runtime sessions.

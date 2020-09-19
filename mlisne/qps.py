@@ -6,8 +6,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from mlisne.dataset import EstimatorDataset
-from mlisne.helpers import run_onnx_session
+from mlisne import run_onnx_session
 
 def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
                 sess: rt.InferenceSession, input_type: int, input_names: Tuple[str, str], X_di: np.ndarray = None,
@@ -22,12 +21,6 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
     -----------
     X_ci: array-like, shape(n_continuous,)
         1D vector of standardized continuous inputs
-    X_di: array-like, shape(n_discrete,), default: None
-        1D vector of discrete inputs
-    L_i: array-like, shape(n_mixed,), default: None
-        1D vector of original mixed discrete indices
-    L_vals: array-like, shape(n_mixed,), default: None
-        1D vector of original mixed discrete values
     types: list-like, length(2)
         Numpy dtypes for continuous and discrete data
     S: int
@@ -44,6 +37,12 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
         Whether the model takes continuous/discrete inputs together or separately
     input_names: tuple, length(2)
         Names of input nodes if separate continuous and discrete inputs
+    X_di: array-like, shape(n_discrete,), default: None
+        1D vector of discrete inputs
+    L_ind: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete indices
+    L_vals: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete values
     fcn: Object, default = None
         Vectorized decision function to wrap ML output
     **kwargs: keyword arguments to pass into decision function
@@ -104,17 +103,27 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
     qps = np.mean(ml_out)
     return(qps)
 
-def estimate_qps(X: EstimatorDataset, ML_onnx: str, S: int = 100, delta: float = 0.8, seed: int = None,
-                 types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1,
-                 input_names: Tuple[str, str]=("c_inputs", "d_inputs"), fcn = None, vectorized = False, **kwargs):
+def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequence = None, D: Sequence = None, L: Dict[int, Set] = None,
+                      S: int = 100, delta: float = 0.8, seed: int = None, types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1,
+                      input_names: Tuple[str, str]=("c_inputs", "d_inputs"), fcn = None, vectorized = False, **kwargs):
     """Estimate QPS for given dataset and ONNX model
 
     Parameters
     -----------
-    X: EstimatorDataset
-        Dataset with loaded historical treatment data
     ML_onnx: str
         String path to ONNX model
+    X_c: array-like, default: None
+        1D/2D vector of continuous input variables
+    X_d: array-like, default: None
+        1D/2D vector of discrete input variables
+    data: array-like, default: None
+        Dataset containing ML input variables
+    C: array-like, default: None
+        Integer column indices for continous variables
+    D: array-like, default: None
+        Integer column indices for discrete variables
+    L: Dict[int, Set]
+        Dictionary with keys as indices of X_c and values as sets of discrete values
     S: int, default: 100
         Number of draws for each QPS estimation
     delta: float, default: 0.8
@@ -138,10 +147,61 @@ def estimate_qps(X: EstimatorDataset, ML_onnx: str, S: int = 100, delta: float =
         Array of estimated QPS for each observation in sample
 
     """
+    # Set X_c and X_d based on inputs
+    if X_c is None and data is None:
+        raise ValueError("QPS estimation requires continuous data!")
 
-    X_c = X.X_c
-    X_d = X.X_d
-    L = X.L
+    # Prioritize explicitly passed variables
+    if X_c is not None:
+        X_c = np.array(X_c)
+    if X_d is not None:
+        X_d = np.array(X_d)
+
+    if data is not None:
+        data = np.array(data)
+
+    # If X_c not given, but data is, then we assume all of data is X_c
+    if X_c is None and X_d is not None and data is not None:
+        print("`X_c` not given but both `X_d` and `data` given. We will assume that all the variables in `data` are continuous.")
+        X_c = data
+
+    # If X_d not given, but data is, then we assume all of data is X_d
+    if X_c is not None and X_d is None and data is not None:
+        print("`X_d` not given but both `X_c` and `data` given. We will assume that all the variables in `data` are discrete.")
+        X_d = data
+
+    # If both X_c and X_d are none, then use indices
+    if X_c is None and X_d is None:
+        if C is None and D is None:
+            print("`data` given but no indices passed. We will assume that all the variables in `data` are continuous.")
+            X_c = data
+        elif C is None:
+            if isinstance(D, int):
+                d_len = 1
+            else:
+                d_len = len(D)
+            X_d = data[:,D]
+            if d_len >= data.shape[1]:
+                raise ValueError(f"Passed discrete indices of length {d_len} for input data of shape {data.shape}. Continuous variables are necessary to conduct QPS estimation.")
+            else:
+                print(f"Passed discrete indices of length {d_len} for input data of shape {data.shape}. Remaining columns of `data` will be assumed to be continuous variables.")
+                X_c = np.delete(data, D, axis = 1)
+        elif D is None:
+            if isinstance(C, int):
+                c_len = 1
+            else:
+                c_len = len(C)
+            X_c = data[:,C]
+            if c_len < data.shape[1]:
+                print(f"Passed continuous indices of length {c_len} for input data of shape {data.shape}. Remaining columns of `data` will be assumed to be discrete variables.")
+                X_d = np.delete(data, C, axis = 1)
+        else:
+            X_c = data[:,C]
+            X_d = data[:,D]
+
+    # Force X_c to be 2d array
+    if X_c.ndim == 1:
+        X_c = X_c[:,np.newaxis]
 
     # Vectorize decision function if not
     if fcn is not None and vectorized == False:
@@ -163,10 +223,10 @@ def estimate_qps(X: EstimatorDataset, ML_onnx: str, S: int = 100, delta: float =
     # If types not given, then infer from data
     types = list(types)
     if types[0] is None:
-        types[0] = X.X_c.dtype
+        types[0] = X_c.dtype
     if types[1] is None:
         if X_d is not None:
-            types[1] = X.X_d.dtype
+            types[1] = X_d.dtype
 
     # === Standardize continuous variables ===
     # Formula: (X_ik - u_k)/o_k; k represents a continuous variable
@@ -198,7 +258,7 @@ def estimate_qps(X: EstimatorDataset, ML_onnx: str, S: int = 100, delta: float =
 
 def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
                     X_di: np.ndarray = None, L_ind: np.ndarray = None, L_vals: np.ndarray = None,
-                    pandas:  bool = None, pandas_cols: Sequence = None, **kwargs):
+                    pandas:  bool = False, pandas_cols: Sequence = None, **kwargs):
     """Compute QPS for a single row of data, using a user-defined input function.
 
     Quasi-propensity score estimation involves taking draws :math:`X_c^1, \\ldots,X_c^S` from the uniform distribution on :math:`N(X_{ci}, \\delta)`, where :math:`N(X_{ci},\\delta)` is the :math:`p_c` dimensional ball centered at :math:`X_{ci}` with radius :math:`\\delta`.
@@ -209,8 +269,8 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
     -----------
     X_ci: array-like, shape(n_continuous,)
         1D vector of standardized continuous inputs
-    X_di: array-like, shape(n_discrete,), default: None
-        1D vector of discrete inputs
+    ml: Object
+        User-defined vectorized ML function
     S: int
         Number of draws
     delta: float
@@ -219,6 +279,16 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
         1D vector of means of continuous variables
     sigma: array-like, shape(n_continuous,)
         1D vector of standard deviations of continuous variables
+    X_di: array-like, shape(n_discrete,), default: None
+        1D vector of discrete inputs
+    L_ind: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete indices
+    L_vals: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete values
+    pandas: bool, default: False
+        Whether to convert input to pandas DataFrame before sending into function
+    pandas_cols: Sequence, default: None
+        Column names for pandas input. Pandas defaults to integer names.
     **kwargs: keyword arguments to pass into user function
 
     Returns
@@ -264,16 +334,27 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
     qps = np.mean(ml_out)
     return(qps)
 
-def estimate_qps_user_defined(X: EstimatorDataset, ml, S: int = 100, delta: float = 0.8, seed: int = None,
-                              pandas:  bool = None, pandas_cols: Sequence = None, **kwargs):
+def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequence = None, D: Sequence = None, L: Dict[int, Set] = None,
+                              S: int = 100, delta: float = 0.8, seed: int = None,
+                              pandas: bool = None, pandas_cols: Sequence = None, **kwargs):
     """Estimate QPS for given dataset and user defined ML function
 
     Parameters
     -----------
-    X: EstimatorDataset
-        Dataset with loaded historical treatment data
     ml: Object
         User defined ml function
+    X_c: array-like, default: None
+        1D/2D vector of continuous input variables
+    X_d: array-like, default: None
+        1D/2D vector of discrete input variables
+    data: array-like, default: None
+        Dataset containing ML input variables
+    C: array-like, default: None
+        Integer column indices for continous variables
+    D: array-like, default: None
+        Integer column indices for discrete variables
+    L: Dict[int, Set]
+        Dictionary with keys as indices of X_c and values as sets of discrete values
     S: int, default: 100
         Number of draws for each QPS estimation
     delta: float, default: 0.8
@@ -288,10 +369,61 @@ def estimate_qps_user_defined(X: EstimatorDataset, ml, S: int = 100, delta: floa
         Array of estimated QPS for each observation in sample
 
     """
+    # Set X_c and X_d based on inputs
+    if X_c is None and data is None:
+        raise ValueError("QPS estimation requires continuous data!")
 
-    X_c = X.X_c
-    X_d = X.X_d
-    L = X.L
+    # Prioritize explicitly passed variables
+    if X_c is not None:
+        X_c = np.array(X_c)
+    if X_d is not None:
+        X_d = np.array(X_d)
+
+    if data is not None:
+        data = np.array(data)
+
+    # If X_c not given, but data is, then we assume all of data is X_c
+    if X_c is None and X_d is not None and data is not None:
+        print("`X_c` not given but both `X_d` and `data` given. We will assume that all the variables in `data` are continuous.")
+        X_c = data
+
+    # If X_d not given, but data is, then we assume all of data is X_d
+    if X_c is not None and X_d is None and data is not None:
+        print("`X_d` not given but both `X_c` and `data` given. We will assume that all the variables in `data` are discrete.")
+        X_d = data
+
+    # If both X_c and X_d are none, then use indices
+    if X_c is None and X_d is None:
+        if C is None and D is None:
+            print("`data` given but no indices passed. We will assume that all the variables in `data` are continuous.")
+            X_c = data
+        elif C is None:
+            if isinstance(D, int):
+                d_len = 1
+            else:
+                d_len = len(D)
+            X_d = data[:,D]
+            if d_len >= data.shape[1]:
+                raise ValueError(f"Passed discrete indices of length {d_len} for input data of shape {data.shape}. Continuous variables are necessary to conduct QPS estimation.")
+            else:
+                print(f"Passed discrete indices of length {d_len} for input data of shape {data.shape}. Remaining columns of `data` will be assumed to be continuous variables.")
+                X_c = np.delete(data, D, axis = 1)
+        elif D is None:
+            if isinstance(C, int):
+                c_len = 1
+            else:
+                c_len = len(C)
+            X_c = data[:,C]
+            if c_len < data.shape[1]:
+                print(f"Passed continuous indices of length {c_len} for input data of shape {data.shape}. Remaining columns of `data` will be assumed to be discrete variables.")
+                X_d = np.delete(data, C, axis = 1)
+        else:
+            X_c = data[:,C]
+            X_d = data[:,D]
+
+    # Force X_c to be 2d array
+    if X_c.ndim == 1:
+        X_c = X_c[:,np.newaxis]
 
     # === Preprocess mixed variables ===
     if L is not None:
@@ -330,6 +462,6 @@ def estimate_qps_user_defined(X: EstimatorDataset, ml, S: int = 100, delta: floa
             L_val_i = mixed_og_vals[i]
         QPS_vec.append(_computeUserQPS(X_c[i,], ml, S, delta, mu, sigma, X_di, L_ind_i,
                         L_val_i, pandas, pandas_cols, **kwargs)) # Compute QPS for each individual i
-                        
+
     QPS_vec = np.array(QPS_vec)
     return QPS_vec

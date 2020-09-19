@@ -7,9 +7,6 @@ import numpy as np
 import pandas as pd
 from onnxmltools.convert.common.data_types import FloatTensorType, DoubleTensorType, Int64TensorType
 
-def check_is_fitted(estimator):
-    return
-
 def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, input_names: Sequence[str],
                      label_names: Sequence[str] = None, fcn = None, **kwargs):
     """Convenience function to execute ONNX inference with an optional post-inference function
@@ -186,7 +183,3 @@ def _guess_numpy_type(data_type):
         "Unsupported data_type '{}'. You may raise an issue "
         "at https://github.com/onnx/sklearn-onnx/issues."
         "".format(data_type))
-
-class Config:
-    """Configuration class for Pydantic Dataclass"""
-    arbitrary_types_allowed = True

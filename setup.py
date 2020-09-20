@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 from os import path, getcwd
 import sys
+import mlisne
 
 here = path.abspath(path.dirname(__file__))
 sys.path.insert(0, path.join(here, "mlisne"))

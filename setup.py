@@ -1,13 +1,9 @@
-from mlisne.__init__ import __version__
 from setuptools import setup, find_packages
 from os import path, getcwd
 import sys
 
 here = path.abspath(path.dirname(__file__))
 sys.path.insert(0, path.join(here, "mlisne"))
-
-print("version")
-print(__version__)
 
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
@@ -23,7 +19,7 @@ with open(requirements_path) as f:
 
 setup(
     name="mlisne",
-    version=__version__,
+    version=mlisne.__version__,
     description="Machine Learning is Natural Experiment",
     url="https://github.com/factoryofthesun/mlisne",
     author="Richard Liu",

@@ -23,7 +23,7 @@ In order to understand what causal effects can be learned from the data :math:`(
 
 		p^{ML}(x;\delta) \equiv\frac{\int_{{\cal X}\cap N(x,\delta)}ML(x^*)dx^*}{\int_{{\cal X}\cap N(x,\delta)}dx^*},
 
-where :math:`N(x, \delta)=\{x^*\in\mathbb{R}^p:\|x-x^*\|\le\delta\}` is the :math:`\delta-`ball around :math:`x\in {\cal X}`. Here, :math:`\|\cdot\|` denotes the Euclidean distance on :math:`\mathbb{R}^p`. We assume that :math:`ML` is a :math:`{\cal L}^p`-measurable function so that the integrals exist.
+where :math:`N(x, \delta)=\{x^*\in\mathbb{R}^p:\|x-x^*\|\le\delta\}` is the :math:`\delta`-ball around :math:`x\in {\cal X}`. Here, :math:`\|\cdot\|` denotes the Euclidean distance on :math:`\mathbb{R}^p`. We assume that :math:`ML` is a :math:`{\cal L}^p`-measurable function so that the integrals exist.
 
 We then can define QPS as follows.
 

@@ -9,12 +9,12 @@ MLISNE: Machine Learning is Natural Experiment Documentation
 Overview
 ~~~~~~~~
 
-The mlisne package is a generic implementation of the treatment effect estimation method proposed in :cite:`Narita2020`. The package provides an easy-to-use pipeline that encompasses data preprocessing, QPS estimation, and treatment effect estimation, and is designed to be flexible to the researcher's specific treatment interface.
+The mlisne package is a generic implementation of the treatment effect estimation method proposed in :cite:`Narita2020`. The package provides functions for QPS estimation and treatment effect estimation, and is designed to be flexible to the researcher's specific treatment interface.
 
 Supported ML Frameworks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The main QPS estimation function ``estimate_qps`` only accepts models in the ONNX framework in order to maintain the framework-agnostic implementation. The module provides an ONNX conversion function ``convert_to_onnx`` that currently supports conversion from the following frameworks:
+The ML-agnostic QPS estimation function ``estimate_qps_onnx`` only accepts models in the ONNX framework in order to maintain the generalized implementation. The module provides an ONNX conversion function ``convert_to_onnx`` that currently supports conversion from the following frameworks:
 
 - `Sklearn <https://github.com/onnx/sklearn-onnx/>`_
 - `Pytorch <https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html>`_

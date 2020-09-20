@@ -4,5 +4,4 @@ onnxconverter-common>=1.7.0
 onnxmltools>=1.7.0
 onnxruntime>=1.4.0
 pandas>=1.0.5
-prettytable>=0.7.2
-pydantic>=1.6.1
+linearmodels>=4.0.0

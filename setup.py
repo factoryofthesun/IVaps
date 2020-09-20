@@ -1,7 +1,6 @@
 from setuptools import setup, find_packages
 from os import path, getcwd
 import sys
-import mlisne
 
 here = path.abspath(path.dirname(__file__))
 sys.path.insert(0, path.join(here, "mlisne"))
@@ -20,7 +19,7 @@ with open(requirements_path) as f:
 
 setup(
     name="mlisne",
-    version=mlisne.__version__,
+    version="0.1.0",
     description="Machine Learning is Natural Experiment",
     url="https://github.com/factoryofthesun/mlisne",
     author="Richard Liu",

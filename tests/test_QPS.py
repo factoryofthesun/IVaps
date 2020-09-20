@@ -11,6 +11,7 @@ import onnxruntime as rt
 from pathlib import Path
 
 from mlisne import estimate_qps_onnx, estimate_qps_user_defined
+from mlisne.qps import _get_og_order
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")
@@ -185,3 +186,30 @@ def test_1d(iris_dataset):
 
     assert np.all(qps0 == 0)
     assert np.all(qps1 == 1)
+
+def test_pandas_keep_order(iris_dataset):
+    # User defined function that is dependent on column order
+    def iris_order(X, **kwargs):
+        assert all(X.columns == ['x1', 'x2', 'x3', 'x4'])
+        return np.array([1]*len(X))
+
+    qps = estimate_qps_user_defined(iris_order, data = iris_dataset.iloc[:,1:], C = [2,3], D = [0,1],
+                                    pandas = True, keep_order = True, pandas_cols = ['x1', 'x2', 'x3', 'x4'])
+
+    order = _get_og_order(4, [2,3], [0,1])
+    assert order == [2,3,0,1]
+
+def test_pandas_reorder(iris_dataset):
+    seed = np.random.choice(range(100))
+
+    # User defined function that is dependent on column order
+    def iris_order(X, **kwargs):
+        assert all(X.columns == ['x3', 'x4', 'x1', 'x2'])
+        return X.iloc[:,0] * 0.5
+
+    qps = estimate_qps_user_defined(iris_order, data = iris_dataset.iloc[:,1:], C = [2,3], D = [0,1],
+                                    pandas = True, keep_order = True, reorder = [2,3,0,1],
+                                    pandas_cols = ['x3', 'x4', 'x1', 'x2'], seed = seed)
+    qps2 = estimate_qps_user_defined(iris_order, data = iris_dataset.iloc[:,1:], C = [2,3], D = [0,1],
+                                    pandas = True, pandas_cols = ['x3', 'x4', 'x1', 'x2'], seed = seed)
+    assert np.array_equal(qps, qps2)

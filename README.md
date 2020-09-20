@@ -169,7 +169,29 @@ def ml_round(X, **kwargs):
 qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5)
 ```
 
-### Mixed Variables Treatment
+### Pandas Compatibility
+Sometimes the custom user function may require a pandas dataframe as an input and be column-order or column-name sensitive. Below are examples of how to pass these options into QPS estimation.
+```python
+import pandas as import pd
+from mlisne import estimate_qps_user_defined
+
+data = pd.read_csv("path_to_your_historical_data.csv")
+
+# If the custom function expects pandas data, we need to set the `pandas` flag and optionally assign column names
+qps = estimate_qps_user_defined(data = data, ml = pandas_dependent_function, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'])
+
+# We can also have the inputs maintain the original order that we passed them in
+qps = estimate_qps_user_defined(data = data, ml = function_that_needs_original_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True)
+
+# We can also do a custom reordering of the columns -- the arguments `keep_order`, `reorder`, and `pandas_cols` are applied sequentially in that order
+# The below example will apply the ordering using the indices passed into `reorder` onto the original column order
+qps = estimate_qps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True, reorder = new_ordering)
+
+# The below example will apply the reordering on the default input order, which is [continuous_variables, discrete_variables]
+qps = estimate_qps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], reorder = new_ordering)
+```
+
+### Mixed Variables and Missing Values Treatment
 QPS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary ``L``, where the keys are the indices of ``X_c`` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
 
 ```python

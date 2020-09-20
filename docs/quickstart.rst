@@ -117,6 +117,31 @@ QPS estimation is also equipped to handle mixed variables (variables that have b
   # QPS estimation
   qps = estimate_qps_onnx(ml_path, data = data_with_missing, L = L)
 
+Pandas Compatibility
+--------------------
+
+Sometimes the custom user function may require a pandas dataframe as an input and be column-order or column-name sensitive. Below are examples of how to pass these options into QPS estimation.
+
+.. code-block:: python
+
+  import pandas as import pd
+  from mlisne import estimate_qps_user_defined
+
+  data = pd.read_csv("path_to_your_historical_data.csv")
+
+  # If the custom function expects pandas data, we need to set the `pandas` flag and optionally assign column names
+  qps = estimate_qps_user_defined(data = data, ml = pandas_dependent_function, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'])
+
+  # We can also have the inputs maintain the original order that we passed them in
+  qps = estimate_qps_user_defined(data = data, ml = function_that_needs_original_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True)
+
+  # We can also do a custom reordering of the columns -- the arguments `keep_order`, `reorder`, and `pandas_cols` are applied sequentially in that order
+  # The below example will apply the ordering using the indices passed into `reorder` onto the original column order
+  qps = estimate_qps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True, reorder = new_ordering)
+
+  # The below example will apply the reordering on the default input order, which is [continuous_variables, discrete_variables]
+  qps = estimate_qps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], reorder = new_ordering)
+
 IV Estimation
 ~~~~~~~~~~~~~
 

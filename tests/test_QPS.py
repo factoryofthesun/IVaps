@@ -213,3 +213,19 @@ def test_pandas_reorder(iris_dataset):
     qps2 = estimate_qps_user_defined(iris_order, data = iris_dataset.iloc[:,1:], C = [2,3], D = [0,1],
                                     pandas = True, pandas_cols = ['x3', 'x4', 'x1', 'x2'], seed = seed)
     assert np.array_equal(qps, qps2)
+
+def test_cpu_execution(iris_dataset):
+    import time
+
+    seed = np.random.choice(range(100))
+    t0 = time.time()
+    qps_gpu = estimate_qps_onnx(data = iris_dataset.drop("y", axis=1), S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
+    t1 = time.time()
+    print("GPU runtime:", t1-t0)
+
+    t0 = time.time()
+    qps_cpu = estimate_qps_onnx(data = iris_dataset.drop("y", axis=1), S=100, delta=0.8, ML_onnx=sklearn_logreg, seed = seed, types=(np.float32,None), cpu = True)
+    t1 = time.time()
+    print("CPU runtime:", t1-t0)
+
+    assert np.array_equal(qps_gpu, qps_cpu)

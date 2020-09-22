@@ -17,6 +17,18 @@ if not path.exists(requirements_path):
 with open(requirements_path) as f:
     install_requires = f.read().splitlines()
 
+# GPU detection
+from subprocess import check_output, CalledProcessError
+
+try:
+    num_gpus = len(check_output(['nvidia-smi', '--query-gpu=gpu_name',
+                                 '--format=csv']).decode().strip().split('\n'))
+    onnx = 'onnxruntime-gpu' if num_gpus > 1 else 'onnxruntime'
+except CalledProcessError:
+    onnx = 'onnxruntime'
+
+install_requires.append(onnx)
+
 setup(
     name="mlisne",
     version="0.1.0",

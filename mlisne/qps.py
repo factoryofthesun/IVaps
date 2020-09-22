@@ -105,7 +105,7 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
 
 def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequence = None, D: Sequence = None, L: Dict[int, Set] = None,
                       S: int = 100, delta: float = 0.8, seed: int = None, types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1,
-                      input_names: Tuple[str, str]=("c_inputs", "d_inputs"), fcn = None, vectorized = False, **kwargs):
+                      input_names: Tuple[str, str]=("c_inputs", "d_inputs"), fcn = None, vectorized: bool = False, cpu: bool = False, **kwargs):
     """Estimate QPS for given dataset and ONNX model
 
     Parameters
@@ -140,6 +140,8 @@ def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequ
         Decision function to apply to ML output
     vectorized: bool, default: False
         Indicator for whether decision function is already vectorized
+    cpu: bool, default False
+        Run inference on CPU; defaults to GPU if available
 
     Returns
     -----------
@@ -239,6 +241,11 @@ def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequ
     if seed is not None:
         np.random.seed(seed)
     sess = rt.InferenceSession(ML_onnx)
+
+    # Set CPU provider if specified
+    if cpu == True:
+        sess.set_providers("CPUExecutionProvider")
+
     QPS_vec = []
     for i in range(X_c.shape[0]):
         X_di = None
@@ -413,7 +420,7 @@ def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequen
     ------
     The arguments `keep_order`, `reorder`, and `pandas_cols` are applied sequentially, in that order. This means that if `keep_order` is set, then `reorder` will reorder the columns from the original column order as `data`. `pandas_cols` will then be the names of the new ordered dataset.
 
-    The default ordering of inputs is [X_c, X_d], where the continuous variables and discrete variables will be in the original order regardless of how their input is passed. If `reorder` is called without `keep_order`, then the reordering will be performed on this default ordering. 
+    The default ordering of inputs is [X_c, X_d], where the continuous variables and discrete variables will be in the original order regardless of how their input is passed. If `reorder` is called without `keep_order`, then the reordering will be performed on this default ordering.
 
     """
     # Set X_c and X_d based on inputs

@@ -24,7 +24,6 @@ try:
     num_gpus = len(check_output(['nvidia-smi', '--query-gpu=gpu_name',
                                  '--format=csv']).decode().strip().split('\n'))
     onnx = 'onnxruntime-gpu' if num_gpus > 1 else 'onnxruntime'
-    install_requires.append('cudatoolkit') # Also require CUDA if on GPU 
 except CalledProcessError:
     onnx = 'onnxruntime'
 

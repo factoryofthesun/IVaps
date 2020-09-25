@@ -24,7 +24,7 @@ try:
     num_gpus = len(check_output(['nvidia-smi', '--query-gpu=gpu_name',
                                  '--format=csv']).decode().strip().split('\n'))
     onnx = 'onnxruntime-gpu' if num_gpus > 1 else 'onnxruntime'
-except CalledProcessError:
+except:
     onnx = 'onnxruntime'
 
 install_requires.append(onnx)

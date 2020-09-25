@@ -8,9 +8,9 @@ import pandas as pd
 
 from mlisne import run_onnx_session
 
-def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
-                sess: rt.InferenceSession, input_type: int, input_names: Tuple[str, str], X_di: np.ndarray = None,
-                L_ind: np.ndarray = None, L_vals: np.ndarray = None, fcn = None, **kwargs):
+def _computeQPS(X_ci: np.ndarray, X_di: np.ndarray, L_ind: np.ndarray, L_vals: np.ndarray,
+                types: Tuple[np.dtype, np.dtype], S: int, delta: float, mu: np.ndarray, sigma: np.ndarray, sess: rt.InferenceSession,
+                input_type: int, input_names: Tuple[str, str], fcn, **kwargs):
     """Compute QPS for a single row of data
 
     Quasi-propensity score estimation involves taking draws :math:`X_c^1, \\ldots,X_c^S` from the uniform distribution on :math:`N(X_{ci}, \\delta)`, where :math:`N(X_{ci},\\delta)` is the :math:`p_c` dimensional ball centered at :math:`X_{ci}` with radius :math:`\\delta`.
@@ -21,6 +21,12 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
     -----------
     X_ci: array-like, shape(n_continuous,)
         1D vector of standardized continuous inputs
+    X_di: array-like, shape(n_discrete,), default: None
+        1D vector of discrete inputs
+    L_ind: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete indices
+    L_vals: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete values
     types: list-like, length(2)
         Numpy dtypes for continuous and discrete data
     S: int
@@ -37,12 +43,6 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
         Whether the model takes continuous/discrete inputs together or separately
     input_names: tuple, length(2)
         Names of input nodes if separate continuous and discrete inputs
-    X_di: array-like, shape(n_discrete,), default: None
-        1D vector of discrete inputs
-    L_ind: array-like, shape(n_mixed,), default: None
-        1D vector of original mixed discrete indices
-    L_vals: array-like, shape(n_mixed,), default: None
-        1D vector of original mixed discrete values
     fcn: Object, default = None
         Vectorized decision function to wrap ML output
     **kwargs: keyword arguments to pass into decision function
@@ -105,7 +105,8 @@ def _computeQPS(X_ci: np.ndarray, types: Sequence[np.dtype], S: int, delta: floa
 
 def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequence = None, D: Sequence = None, L: Dict[int, Set] = None,
                       S: int = 100, delta: float = 0.8, seed: int = None, types: Tuple[np.dtype, np.dtype] = (None, None), input_type: int = 1,
-                      input_names: Tuple[str, str]=("c_inputs", "d_inputs"), fcn = None, vectorized: bool = False, cpu: bool = False, **kwargs):
+                      input_names: Tuple[str, str]=("c_inputs", "d_inputs"), fcn = None, vectorized: bool = False, cpu: bool = False,
+                      parallel: bool = False, nprocesses: int = None, nchunks: int = None, **kwargs):
     """Estimate QPS for given dataset and ONNX model
 
     Parameters
@@ -142,6 +143,12 @@ def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequ
         Indicator for whether decision function is already vectorized
     cpu: bool, default False
         Run inference on CPU; defaults to GPU if available
+    parallel: bool, default: False
+        Whether to parallelize the QPS estimation
+    nprocesses: int, default: None
+        Number of processes to parallelize. Defaults to number of processors on machine.
+    nchunks: int, default: None
+        Number of chunks to send to each worker. Defaults to 14*nprocesses.
 
     Returns
     -----------
@@ -244,8 +251,51 @@ def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequ
 
     # Set CPU provider if specified
     if cpu == True:
-        sess.set_providers("CPUExecutionProvider")
+        print("Available providers:", sess.get_providers())
+        print("Setting to default CPU provider...")
+        sess.set_providers(["CPUExecutionProvider"])
 
+    # PARALLELIZING NOT POSSIBLE: ONNX InferenceSession not pickleable!
+    # if parallel == True and (cpu == False or "CUDA" not in sess.get_providers()[0]):
+    #     from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+    #     import multiprocessing as mp
+    #     import pathos
+    #     from itertools import repeat
+    #     from functools import partial
+    #
+    #     if X_d is None:
+    #         iter_d = repeat(None)
+    #     else:
+    #         iter_d = iter(X_d)
+    #     if L is None:
+    #         iter_L_ind = repeat(None)
+    #         iter_L_val = repeat(None)
+    #     else:
+    #         iter_L_ind = iter(mixed_og_inds)
+    #         iter_L_val = iter(mixed_og_vals)
+    #
+    #     computeQPS_frozen = partial(_computeQPS, types=types, S=S, delta=delta, mu=mu, sigma=sigma, sess=sess, input_type=input_type,
+    #                                 input_names=input_names, fcn=fcn, **kwargs)
+    #     pool = pathos.pools._ProcessPool(nprocesses)
+    #
+    #     if nprocesses is None:
+    #         workers = "default (# processors)"
+    #         nprocesses = mp.cpu_count()
+    #     else:
+    #         workers = nprocesses
+    #     if nchunks is None:
+    #         nchunks = nprocesses * 14
+    #     print(f"Running QPS estimation with {workers} workers...")
+    #
+    #     chunksize = X_c.shape[0]//nchunks
+    #     # Chunksize should be >= 1
+    #     if chunksize < 1:
+    #         chunksize = 1
+    #     iter_args = zip(iter(X_c), iter_d, iter_L_ind, iter_L_val)
+    #     QPS_vec = pool.starmap(computeQPS_frozen, iter_args, chunksize = chunksize)
+    #     pool.close()
+
+    # TODO: Make QPS estimation multivariable and send all into ONNX at once
     QPS_vec = []
     for i in range(X_c.shape[0]):
         X_di = None
@@ -258,14 +308,14 @@ def estimate_qps_onnx(ML_onnx: str, X_c = None, X_d = None, data = None, C: Sequ
             L_ind_i = mixed_og_inds[i]
             L_val_i = mixed_og_vals[i]
 
-        QPS_vec.append(_computeQPS(X_c[i,], types, S, delta, mu, sigma, sess, X_di = X_di, L_ind = L_ind_i,
-                        L_vals = L_val_i, input_type=input_type, input_names=input_names, fcn = fcn, **kwargs)) # Compute QPS for each individual i
+        QPS_vec.append(_computeQPS(X_c[i,], X_di, L_ind_i, L_val_i, types, S, delta, mu, sigma, sess, input_type, input_names, fcn, **kwargs)) # Compute QPS for each individual i
+
     QPS_vec = np.array(QPS_vec)
     return QPS_vec
 
-def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
-                    X_di: np.ndarray = None, L_ind: np.ndarray = None, L_vals: np.ndarray = None,
-                    pandas:  bool = False, pandas_cols: Sequence = None, order: Sequence = None, reorder: Sequence = None, **kwargs):
+def _computeUserQPS(X_ci: np.ndarray, X_di: np.ndarray, L_ind: np.ndarray, L_vals: np.ndarray,
+                    ml, S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
+                    pandas:  bool, pandas_cols: Sequence, order: Sequence, reorder: Sequence, **kwargs):
     """Compute QPS for a single row of data, using a user-defined input function.
 
     Quasi-propensity score estimation involves taking draws :math:`X_c^1, \\ldots,X_c^S` from the uniform distribution on :math:`N(X_{ci}, \\delta)`, where :math:`N(X_{ci},\\delta)` is the :math:`p_c` dimensional ball centered at :math:`X_{ci}` with radius :math:`\\delta`.
@@ -276,6 +326,12 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
     -----------
     X_ci: array-like, shape(n_continuous,)
         1D vector of standardized continuous inputs
+    X_di: array-like, shape(n_discrete,), default: None
+        1D vector of discrete inputs
+    L_ind: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete indices
+    L_vals: array-like, shape(n_mixed,), default: None
+        1D vector of original mixed discrete values
     ml: Object
         User-defined vectorized ML function
     S: int
@@ -286,16 +342,14 @@ def _computeUserQPS(X_ci: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, 
         1D vector of means of continuous variables
     sigma: array-like, shape(n_continuous,)
         1D vector of standard deviations of continuous variables
-    X_di: array-like, shape(n_discrete,), default: None
-        1D vector of discrete inputs
-    L_ind: array-like, shape(n_mixed,), default: None
-        1D vector of original mixed discrete indices
-    L_vals: array-like, shape(n_mixed,), default: None
-        1D vector of original mixed discrete values
     pandas: bool, default: False
         Whether to convert input to pandas DataFrame before sending into function
     pandas_cols: Sequence, default: None
         Column names for pandas input. Pandas defaults to integer names.
+    order: Sequence
+        Reording the columns after ordering into [cts vars, discrete vars]
+    reorder: Sequence, default: False
+        Indices to reorder the data assuming original order `order`
     **kwargs: keyword arguments to pass into user function
 
     Returns
@@ -376,7 +430,7 @@ def _get_og_order(n, C, D):
 
 def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequence = None, D: Sequence = None, L: Dict[int, Set] = None,
                               S: int = 100, delta: float = 0.8, seed: int = None, pandas: bool = False, pandas_cols: Sequence = None,
-                              keep_order: bool = False, reorder: Sequence = None, **kwargs):
+                              keep_order: bool = False, reorder: Sequence = None, parallel: bool = False, nprocesses: int = None, nchunks: int = None, **kwargs):
     """Estimate QPS for given dataset and user defined ML function
 
     Parameters
@@ -409,6 +463,12 @@ def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequen
         Whether to maintain the column order if data passed as a single 2D array
     reorder: Sequence, default: False
         Indices to reorder the data assuming original order [X_c, X_d]
+    parallel: bool, default: False
+        Whether to parallelize the QPS estimation
+    nprocesses: int, default: None
+        Number of processes to parallelize. Defaults to number of processors on machine.
+    nchunks: int, default: None
+        Number of chunks to send to each worker. Defaults to 14*nprocesses.
     **kwargs: keyword arguments to pass into user function
 
     Returns
@@ -422,7 +482,11 @@ def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequen
 
     The default ordering of inputs is [X_c, X_d], where the continuous variables and discrete variables will be in the original order regardless of how their input is passed. If `reorder` is called without `keep_order`, then the reordering will be performed on this default ordering.
 
+    Parallelization uses the `ProcessPoolExecutor` module from concurrent.futures, which will NOT be able to deal with execution on GPU. If the user function enables inference on GPU, then it is recommended to implement parallelization within the user function as well.
+
+    The optimal settings for nprocesses and nchunks are specific to each machine, and it is highly recommended that the user pass these arguments to maximize the performance boost. `This SO thread <https://stackoverflow.com/questions/42074501/python-concurrent-futures-processpoolexecutor-performance-of-submit-vs-map>`_ recommends setting nchunks to be 14 * # of workers for optimal performance.
     """
+
     # Set X_c and X_d based on inputs
     if X_c is None and data is None:
         raise ValueError("QPS estimation requires continuous data!")
@@ -508,18 +572,59 @@ def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequen
         np.random.seed(seed)
 
     QPS_vec = []
-    for i in range(X_c.shape[0]):
-        X_di = None
-        X_ci = None
-        L_ind_i = None
-        L_val_i = None
-        if X_d is not None:
-            X_di = X_d[i,]
-        if L is not None:
-            L_ind_i = mixed_og_inds[i]
-            L_val_i = mixed_og_vals[i]
-        QPS_vec.append(_computeUserQPS(X_c[i,], ml, S, delta, mu, sigma, X_di, L_ind_i,
-                        L_val_i, pandas, pandas_cols, order, reorder, **kwargs)) # Compute QPS for each individual i
+    # Parallelize if set
+    if parallel == True:
+        from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+        import multiprocessing as mp
+        from traceback import print_exc
+        from itertools import repeat
+        from functools import partial
+
+        if X_d is None:
+            iter_d = repeat(None)
+        else:
+            iter_d = iter(X_d)
+        if L is None:
+            iter_L_ind = repeat(None)
+            iter_L_val = repeat(None)
+        else:
+            iter_L_ind = iter(mixed_og_inds)
+            iter_L_val = iter(mixed_og_vals)
+
+        computeUserQPS_frozen = partial(_computeUserQPS, ml = ml, S = S, delta = delta, mu = mu, sigma = sigma, pandas = pandas, pandas_cols = pandas_cols,
+                                                        order = order, reorder = reorder, **kwargs)
+        pool = mp.Pool(nprocesses)
+
+        if nprocesses is None:
+            workers = "default (# processors)"
+            nprocesses = mp.cpu_count()
+        else:
+            workers = nprocesses
+        if nchunks is None:
+            nchunks = nprocesses * 14
+        print(f"Running QPS estimation with {workers} workers...")
+
+        chunksize = X_c.shape[0]//nchunks
+        # Chunksize should be >= 1
+        if chunksize < 1:
+            chunksize = 1
+        iter_args = zip(iter(X_c), iter_d, iter_L_ind, iter_L_val)
+        QPS_vec = pool.starmap(computeUserQPS_frozen, iter_args, chunksize = chunksize)
+        pool.close()
+    else:
+        # TODO: Make below multivariable and also parallelize
+        for i in range(X_c.shape[0]):
+            X_di = None
+            X_ci = None
+            L_ind_i = None
+            L_val_i = None
+            if X_d is not None:
+                X_di = X_d[i,]
+            if L is not None:
+                L_ind_i = mixed_og_inds[i]
+                L_val_i = mixed_og_vals[i]
+            QPS_vec.append(_computeUserQPS(X_c[i,], X_di, L_ind_i, L_val_i,
+                            ml, S, delta, mu, sigma, pandas, pandas_cols, order, reorder, **kwargs)) # Compute QPS for each individual i
 
     QPS_vec = np.array(QPS_vec)
     return QPS_vec

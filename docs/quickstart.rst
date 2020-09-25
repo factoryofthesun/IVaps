@@ -96,6 +96,8 @@ The main QPS estimation functions are ``estimate_qps_onnx``, and ``estimate_qps_
 
   qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5)
 
+  # We can parallelize QPS computation with a user defined function -- see documentation for more details
+  qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5, parallel = True)
 
 Mixed Variables and Missing Values Treatment
 --------------------------------------------

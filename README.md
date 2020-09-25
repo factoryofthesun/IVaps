@@ -13,6 +13,7 @@
 - [Usage](#usage)
   - [QPS Estimation](#qps-estimation)
   - [IV Estimation](#iv-estimation)
+  - [Counterfactual Estimation](#counterfactual-estimation)
   - [Model Conversion](#model-conversion)
   - [Futher Examples](#further-examples)
 - [Versioning](#versioning)
@@ -75,7 +76,7 @@ git clone https://github.com/factoryofthesun/mlisne
 cd mlisne
 pip install -e ./
 ```
-The installation will automatically detect whether there is a compatible GPU device on the system and install either onnxruntime or onnxruntime-gpu. Please note that the default onnxruntime GPU build requires CUDA runtime libraries being installed on the system. Please see the [onnxruntime repository](https://github.com/microsoft/onnxruntime) for more details regarding the GPU build. 
+The installation will automatically detect whether there is a compatible GPU device on the system and install either onnxruntime or onnxruntime-gpu. Please note that the default onnxruntime GPU build requires CUDA runtime libraries being installed on the system. Please see the [onnxruntime repository](https://github.com/microsoft/onnxruntime) for more details regarding the GPU build.
 
 # Requirements
 
@@ -169,6 +170,9 @@ def ml_round(X, **kwargs):
     return treat
 
 qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5)
+
+# We can parallelize QPS computation with a user defined function -- see documentation for more details
+qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5, parallel = True)
 ```
 
 ### Pandas Compatibility

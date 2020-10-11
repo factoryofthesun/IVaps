@@ -7,6 +7,7 @@ import pickle
 import pytest
 import torch
 import torch.nn as nn
+import keras
 from pathlib import Path
 from sklearn.datasets import load_iris
 import lightgbm as lgb
@@ -108,6 +109,11 @@ def lgbm_model():
     model = lgb.Booster(model_file= f"{model_path}/lgbm_example.txt")
     return model
 
+@pytest.fixture()
+def keras_model():
+    model = keras.models.load_model(f"{model_path}/keras_example")
+    return model
+
 @pytest.fixture
 def iris_data():
     iris = pd.read_csv(f"{data_path}/iris_data.csv")
@@ -127,7 +133,7 @@ def test_sklearn_conversion(iris_model, iris_data):
     X_dummy = np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']])
     X_inp = np.array(iris_data[['X1', 'X2', 'X3', 'X4']])
     f = os.path.join(os.path.dirname(__file__), "test_models/iris_test.onnx")
-    convert_to_onnx(iris_model, X_dummy, f, "sklearn")
+    convert_to_onnx(iris_model, "sklearn", X_dummy, path = f)
 
     # Test inference
     skl_preds = iris_model.predict_proba(X_inp)
@@ -139,6 +145,58 @@ def test_sklearn_conversion(iris_model, iris_data):
 
     np.testing.assert_array_almost_equal(skl_preds, onnx_preds_np, decimal=5)
 
+def test_sklearn_input_types(iris_model, iris_data):
+    X_inp = np.array(iris_data[['X1', 'X2', 'X3', 'X4']])
+
+    # Standard input
+    X_dummy = np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']])
+    f = os.path.join(os.path.dirname(__file__), "test_models/iris_test.onnx")
+    convert_to_onnx(iris_model, "sklearn", X_dummy, path = f)
+
+    sess = rt.InferenceSession(f)
+    label_name = 'output_probability'
+    input_name = sess.get_inputs()[0].name
+    onnx_preds = sess.run([label_name], {input_name: X_inp})[0]
+    onnx_preds0 = np.array([[d[0], d[1]] for d in onnx_preds])
+
+    # Pandas 1 row input
+    X_dummy = iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']]
+    f = os.path.join(os.path.dirname(__file__), "test_models/iris_pandas1_test.onnx")
+    convert_to_onnx(iris_model, "sklearn", X_dummy, path = f)
+    sess = rt.InferenceSession(f)
+
+    label_name = 'output_probability'
+    input_name = sess.get_inputs()[0].name
+    onnx_preds = sess.run([label_name], {input_name: X_inp})[0]
+    onnx_preds1 = np.array([[d[0], d[1]] for d in onnx_preds])
+
+    # Pandas 2-dim input
+    X_dummy = iris_data[['X1', 'X2', 'X3', 'X4']]
+    f = os.path.join(os.path.dirname(__file__), "test_models/iris_pandas2_test.onnx")
+    convert_to_onnx(iris_model, "sklearn", X_dummy, path = f)
+
+    sess = rt.InferenceSession(f)
+    label_name = 'output_probability'
+    input_name = sess.get_inputs()[0].name
+    onnx_preds = sess.run([label_name], {input_name: X_inp})[0]
+    onnx_preds2 = np.array([[d[0], d[1]] for d in onnx_preds])
+
+    # Pytorch tensor
+    X_dummy = torch.tensor(np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']]))
+    f = os.path.join(os.path.dirname(__file__), "test_models/iris_torch_test.onnx")
+    convert_to_onnx(iris_model, "sklearn", X_dummy, path = f)
+
+    sess = rt.InferenceSession(f)
+    label_name = 'output_probability'
+    input_name = sess.get_inputs()[0].name
+    onnx_preds = sess.run([label_name], {input_name: X_inp})[0]
+    onnx_preds3 = np.array([[d[0], d[1]] for d in onnx_preds])
+
+    # Test inference
+    np.testing.assert_array_almost_equal(onnx_preds0, onnx_preds1, decimal=5)
+    np.testing.assert_array_almost_equal(onnx_preds1, onnx_preds2, decimal=5)
+    np.testing.assert_array_almost_equal(onnx_preds2, onnx_preds3, decimal=5)
+
 def test_torch_conversion(churn_model, churn_data):
     categorical_cols = ['Geography', 'Gender', 'HasCrCard', 'IsActiveMember']
     numerical_cols = ['CreditScore', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 'EstimatedSalary']
@@ -149,7 +207,7 @@ def test_torch_conversion(churn_model, churn_data):
         cat.append(churn_data[c].cat.codes.values)
     cat_data = np.stack(cat, 1)
     num_data = np.array(churn_data[numerical_cols])
-    tot_data = np.concatenate((cat_data, num_data), axis=1)
+    tot_data = np.concatenate((cat_data, num_data), axis=1).astype(np.float32)
 
     cat_tensor = torch.tensor(cat_data).double()
     num_tensor = torch.tensor(num_data)
@@ -157,7 +215,10 @@ def test_torch_conversion(churn_model, churn_data):
     X_dummy = tot_tensor[0,None]
 
     f = os.path.join(os.path.dirname(__file__), "test_models/churn_test.onnx")
-    convert_to_onnx(churn_model, X_dummy, f, "pytorch")
+    convert_to_onnx(churn_model, "pytorch",X_dummy, path = f)
+
+    f_notensor = os.path.join(os.path.dirname(__file__), "test_models/churn_test_notensor.onnx")
+    convert_to_onnx(churn_model, "pytorch",tot_data, path = f_notensor)
 
     # Test inference
     with torch.no_grad():
@@ -166,7 +227,12 @@ def test_torch_conversion(churn_model, churn_data):
     output_name = sess.get_outputs()[0].name
     onnx_preds = sess.run([output_name], {"c_inputs": tot_data.astype(np.float32)})[0]
 
+    sess = rt.InferenceSession(f_notensor)
+    output_name = sess.get_outputs()[0].name
+    onnx_preds_notensor = sess.run([output_name], {"c_inputs": tot_data.astype(np.float32)})[0]
+
     np.testing.assert_array_almost_equal(torch_preds, onnx_preds, decimal=5)
+    np.testing.assert_array_almost_equal(onnx_preds, onnx_preds_notensor, decimal=5)
 
 def test_torch_cat_conversion(churn_cat_model, churn_data):
     categorical_cols = ['Geography', 'Gender', 'HasCrCard', 'IsActiveMember']
@@ -187,7 +253,7 @@ def test_torch_cat_conversion(churn_cat_model, churn_data):
 
     print(cat_dummy.size(), num_dummy.size())
     f = os.path.join(os.path.dirname(__file__), "test_models/churn_cat_test.onnx")
-    convert_to_onnx(churn_cat_model, (cat_dummy, num_dummy), f, "pytorch", input_type=2, input_names=("d_inputs", "c_inputs"))
+    convert_to_onnx(churn_cat_model, "pytorch", cat_dummy, num_dummy, path = f, input_names=("d_inputs", "c_inputs"))
 
     # Test inference
     with torch.no_grad():
@@ -204,10 +270,10 @@ def test_lgbm_conversion(lgbm_model, lgbm_data):
     og_preds = lgbm_model.predict(X)
 
     X_dummy = np.array(X)[0,:]
-    print(X_dummy.shape)
+    print(X_dummy.dtype)
 
     f = os.path.join(os.path.dirname(__file__), "test_models/lgbm.onnx")
-    convert_to_onnx(lgbm_model, X_dummy, f, "lightgbm", target_opset=12)
+    convert_to_onnx(lgbm_model, "lightgbm", X_dummy, path = f, target_opset=12)
 
     sess = rt.InferenceSession(f)
     label_name = sess.get_outputs()[0].name
@@ -216,3 +282,19 @@ def test_lgbm_conversion(lgbm_model, lgbm_data):
     print(onnx_preds.shape)
 
     np.testing.assert_array_almost_equal(og_preds, np.squeeze(onnx_preds), decimal=5)
+
+def test_keras_conversion(keras_model, iris_data):
+    X_dummy = np.array(iris_data.loc[0, ['X1', 'X2', 'X3', 'X4']])
+    X_inp = np.array(iris_data[['X1', 'X2', 'X3', 'X4']])
+    og_preds = keras_model.predict(X_inp)
+
+    f = os.path.join(os.path.dirname(__file__), "test_models/keras_example.onnx")
+    onnx = convert_to_onnx(keras_model, "keras", X_dummy, path = f)
+    sess = rt.InferenceSession(onnx.SerializeToString())
+    label_name = sess.get_outputs()[0].name
+    input_name = sess.get_inputs()[0].name
+    print("Keras to ONNX serialized default output label:", label_name)
+    print("Keras to ONNX serialized default input label:", input_name)
+    onnx_preds = sess.run([label_name], {input_name: X_inp.astype(np.float32)})[0]
+
+    np.testing.assert_array_almost_equal(og_preds, onnx_preds, decimal = 5)

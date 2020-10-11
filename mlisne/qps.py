@@ -328,7 +328,6 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
         p.close()
         qps_vec = np.array(p_out).flatten()
     else:
-        cpu = False
         qps_vec = _computeQPS(onnx, X_c, X_d, mixed_og_inds, mixed_og_vals, types, S, delta, mu, sigma, input_type, input_names, fcn, cpu, parallel, **kwargs) # Compute QPS for each individual i
         qps_vec = np.array(qps_vec)
     return qps_vec

@@ -5,7 +5,7 @@ import onnxruntime as rt
 import warnings
 import numpy as np
 import pandas as pd
-from onnxmltools.convert.common.data_types import FloatTensorType, DoubleTensorType, Int64TensorType
+from onnxmltools.convert.common.data_types import FloatTensorType, DoubleTensorType, Int64TensorType, Int32TensorType, StringTensorType, BooleanTensorType
 
 def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, input_names: Sequence[str],
                      label_names: Sequence[str] = None, fcn = None, **kwargs):
@@ -46,23 +46,23 @@ def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, in
 
     return ml_out
 
-def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: int = 1,
+def convert_to_onnx(model, framework: str, dummy_input1, dummy_input2 = None, path: str = None,
                     input_names: Tuple[str, str] = ("c_inputs", "d_inputs"),
-                    output_names: Sequence = None, **kwargs) -> bool:
+                    output_names: Sequence = None, **kwargs):
     """Convenience function to quickly convert and save ONNX model with expected input/output settings
 
     Parameters
     -----------
     model: object
         fitted model object
-    dummy_input: 1D input array or 2-tuple of continuous and discrete input arrays
-        Used for type inference and passed into downstream conversion functions
-    path: str
-        path to save ONNX model
     framework: str
         Reference string for one of the implemented frameworks
-    input_type: int, default: 1
-        1 if single array input, 2 if model takes continuous and discrete values separately
+    dummy_input1: list-like
+        Dummy input for first model input used for type inference and passed into downstream conversion functions
+    dummy_input2: list-like, default: None
+        Dummy input for second model input (if applicable) used for type inference and passed into downstream conversion functions
+    path: str, default: None
+        path to save ONNX model
     input_names: Tuple[str, str], default: ("c_inputs", "d_inputs")
         input names to assign ONNX model
     output_names: list-like, default: None
@@ -71,10 +71,28 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
 
     Returns
     -----------
-    bool
+    ONNX model
         Flag indicating successful conversion
 
     """
+
+    # Adjust dummy input(s) if incorrect dimension
+    if framework != "pytorch":
+        dummy_input1 = np.array(dummy_input1)
+        if dummy_input1.ndim > 1:
+            dummy_input1 = dummy_input1[0].flatten()
+    else:
+        if dummy_input1.ndim == 1:
+            dummy_input1 = dummy_input1[:, np.newaxis]
+
+    if dummy_input2 is not None:
+        if framework != "pytorch":
+            dummy_input2 = np.array(dummy_input2)
+            if dummy_input2.ndim > 1:
+                dummy_input2 = dummy_input2[0].flatten()
+        else:
+            if dummy_input2.ndim == 1:
+                dummy_input2 = dummy_input2[:, np.newaxis]
 
     if framework in ["sklearn",
                      "lightgbm",
@@ -82,22 +100,23 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
                      "catboost",
                      "coreml",
                      "libsvm",
-                     "sparkml",]:
-        if input_type == 1:
-            tensortype = _guess_numpy_type(dummy_input.dtype)
-            initial_type = [(input_names[0], tensortype([None, len(dummy_input)]))]
-
-        elif input_type == 2:
-            tensortype_1 = _guess_numpy_type(dummy_input[0].dtype)
-            tensortype_2 = _guess_numpy_type(dummy_input[1].dtype)
-            initial_type = [(input_names[0], tensortype_1([None, len(dummy_input[0])])),
-                                (input_names[1], tensortype_2([None, len(dummy_input[1])]))]
+                     "sparkml",
+                     "keras",]:
+        if dummy_input2 is None:
+            tensortype = _guess_numpy_type(dummy_input1.dtype)
+            initial_type = [(input_names[0], tensortype([None, len(dummy_input1)]))]
         else:
-            raise ValueError("input_type must be either 1 or 2")
+            tensortype_1 = _guess_numpy_type(dummy_input1.dtype)
+            tensortype_2 = _guess_numpy_type(dummy_input2.dtype)
+            initial_type = [(input_names[0], tensortype_1([None, len(dummy_input1)])),
+                                (input_names[1], tensortype_2([None, len(dummy_input2)]))]
 
         if framework == "sklearn":
             from onnxmltools import convert_sklearn
             onx = convert_sklearn(model, initial_types=initial_type, **kwargs)
+        if framework == "keras":
+            from onnxmltools import convert_keras
+            onx = convert_keras(model, initial_types=initial_type, **kwargs)
         if framework == "lightgbm":
             from onnxmltools import convert_lightgbm
             onx = convert_lightgbm(model, initial_types=initial_type, **kwargs)
@@ -125,38 +144,42 @@ def convert_to_onnx(model, dummy_input, path: str, framework: str, input_type: i
         #     for i in range(len(onx.graph.output)):
         #         onx.graph.output[i].name = f"{output_names[i]}"
 
-        with open(path, "wb") as f:
-            f.write(onx.SerializeToString())
-        return True
+        if path is not None:
+            with open(path, "wb") as f:
+                f.write(onx.SerializeToString())
+        return onx
 
     if framework == "pytorch":
+        import torch
         from torch.onnx import export
-        #TODO: How to check # of outputs?
-        if input_type == 1:
+        if path is None:
+            raise ValueError("For PyTorch to ONNX conversion a file path must be given.")
+        if dummy_input2 is None:
             d_axes = {input_names[0]:{0:'N'}}
             if output_names is None:
+                output_names = ["output_0"]
                 d_axes.update({"output_0": {0:'N'}})
             else:
                 d_axes.update({key: {0:'N'} for key in output_names})
-            export(model, dummy_input, path, input_names=[input_names[0]], output_names=["output_0"],
-                              dynamic_axes=d_axes, **kwargs)
-        elif input_type == 2:
-            d_axes = {input_names[0]:{0:'N'}, input_names[1]:{0:'N'}}
-            if output_names is None:
-                d_axes.update({"output_0": {0:'N'}})
-            else:
-                d_axes.update({key: {0:'N'} for key in output_names})
-            export(model, dummy_input, path, input_names=list(input_names), output_names=["output_0"],
+            # Convert to tensor if necessary
+            if not isinstance(dummy_input1, torch.Tensor):
+                dummy_input1 = torch.tensor(dummy_input1)
+            export(model, dummy_input1, path, input_names=[input_names[0]], output_names=output_names,
                               dynamic_axes=d_axes, **kwargs)
         else:
-            raise ValueError("input_type must be either 1 or 2")
-        return True
-
-    if framework == "keras":
-        from onnxmltools import convert_keras
-        onx = convert_keras(model, **kwargs)
-        with open(path, "wb") as f:
-            f.write(onx.SerializeToString())
+            if not isinstance(dummy_input1, torch.Tensor):
+                dummy_input1 = torch.tensor(dummy_input1)
+            if not isinstance(dummy_input2, torch.Tensor):
+                dummy_input2 = torch.tensor(dummy_input2)
+            dummy_input = (dummy_input1, dummy_input2)
+            d_axes = {input_names[0]:{0:'N'}, input_names[1]:{0:'N'}}
+            if output_names is None:
+                output_names = ["output_0"]
+                d_axes.update({"output_0": {0:'N'}})
+            else:
+                d_axes.update({key: {0:'N'} for key in output_names})
+            export(model, dummy_input, path, input_names=list(input_names), output_names=output_names,
+                              dynamic_axes=d_axes, **kwargs)
         return True
 
     else:

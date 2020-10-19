@@ -245,7 +245,7 @@ def test_user_parallel(iris_dataset):
     seed = np.random.choice(range(100))
     model = pickle.load(open(f"{model_path}/iris_logreg.pickle", 'rb'))
     data = iris_dataset.drop("y", axis = 1)
-    data = pd.concat([data]*100, ignore_index = True)
+    data = pd.concat([data]*30, ignore_index = True)
     L = {1:{3.0,4.0}}
 
     t0 = time.time()
@@ -275,7 +275,7 @@ def test_onnx_parallel(iris_dataset):
 
     seed = np.random.choice(range(100))
     data = iris_dataset.drop("y", axis = 1)
-    data = pd.concat([data]*100, ignore_index = True)
+    data = pd.concat([data]*30, ignore_index = True)
 
     t0 = time.time()
     qps_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), parallel = True)
@@ -299,20 +299,20 @@ def test_onnx_compare(iris_dataset):
     seed = np.random.choice(range(100))
 
     data = iris_dataset.drop("y", axis = 1)
-    data = pd.concat([data]*300, ignore_index = True)
+    data = pd.concat([data]*100, ignore_index = True)
 
     t0 = time.time()
-    qps_old = _estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
+    qps_old = _estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None))
     t1 = time.time()
     print("Old QPS onnx runtime:", t1-t0)
 
     t0 = time.time()
-    qps_new = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
+    qps_new = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None))
     t1 = time.time()
     print("New QPS onnx runtime:", t1-t0)
 
     t0 = time.time()
-    qps_new_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), parallel = True)
+    qps_new_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), parallel = True)
     t1 = time.time()
     print("New QPS onnx parallelized runtime:", t1-t0)
 
@@ -323,17 +323,17 @@ def test_onnx_compare(iris_dataset):
     L = {1:{3.0,4.0}}
 
     t0 = time.time()
-    qps_old = _estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), L = L)
+    qps_old = _estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), L = L)
     t1 = time.time()
     print("Old QPS onnx runtime with mixed vars:", t1-t0)
 
     t0 = time.time()
-    qps_new = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), L = L)
+    qps_new = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), L = L)
     t1 = time.time()
     print("New QPS onnx runtime with mixed vars:", t1-t0)
 
     t0 = time.time()
-    qps_new_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), L = L, parallel = True)
+    qps_new_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), L = L, parallel = True)
     t1 = time.time()
     print("New QPS onnx parallelized runtime with mixed vars:", t1-t0)
 
@@ -345,7 +345,7 @@ def test_user_compare(iris_dataset):
     seed = np.random.choice(range(100))
     model = pickle.load(open(f"{model_path}/iris_logreg.pickle", 'rb'))
     data = iris_dataset.drop("y", axis = 1)
-    data = pd.concat([data]*300, ignore_index = True)
+    data = pd.concat([data]*100, ignore_index = True)
 
     t0 = time.time()
     qps_new = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, c = 0.5, seed = seed, model = model)

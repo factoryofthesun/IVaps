@@ -5,6 +5,8 @@ import onnxruntime as rt
 import warnings
 import numpy as np
 import pandas as pd
+import os
+import gc
 
 from mlisne import run_onnx_session
 
@@ -94,6 +96,7 @@ def _computeQPS(onnx, X_c: np.ndarray, X_d: np.ndarray, L_inds: Tuple[np.ndarray
 
     # Set session threads if parallelizing
     if parallel == True:
+        os.environ["OMP_NUM_THREADS"] = '1'
         options.inter_op_num_threads = 1
         options.intra_op_num_threads = 1
 
@@ -121,6 +124,9 @@ def _computeQPS(onnx, X_c: np.ndarray, X_d: np.ndarray, L_inds: Tuple[np.ndarray
             # If input type = 1, then coerce all to the continuous type
             inputs = np.append(inference_draws, X_d_long, axis=1).astype(cts_type)
             ml_out = run_onnx_session([inputs], sess, [input_name], [label_name], fcn, **kwargs)
+
+    # Explicitly delete ONNX session
+    del sess
 
     # Return means of every S rows
     qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
@@ -287,6 +293,11 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
     # If parallelizing, then force inference on CPU
     if parallel == True:
         cpu = True
+
+        # # Need to force Windows implementation of spawning on Linux 
+        # import multiprocess.context as ctx
+        # ctx._force_start_method('spawn')
+
         import pathos
         from functools import partial
         from itertools import repeat
@@ -295,6 +306,7 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
                                     input_names = input_names, fcn = fcn, cpu = cpu, parallel = parallel, **kwargs)
         mp = pathos.helpers.mp
         p = mp.Pool(nprocesses)
+        #p = pathos.pools._ProcessPool(nprocesses)
 
         if nprocesses is None:
             workers = "default (# processors)"
@@ -326,10 +338,12 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
         iter_args = zip(repeat(onnx), iter_c, iter_d, iter_L_ind, iter_L_val)
         p_out = p.starmap(computeQPS_frozen, iter_args)
         p.close()
-        qps_vec = np.array(p_out).flatten()
+        p.join()
+        qps_vec = np.concatenate(p_out)
     else:
         qps_vec = _computeQPS(onnx, X_c, X_d, mixed_og_inds, mixed_og_vals, types, S, delta, mu, sigma, input_type, input_names, fcn, cpu, parallel, **kwargs) # Compute QPS for each individual i
         qps_vec = np.array(qps_vec)
+    gc.collect()
     return qps_vec
 
 def _computeUserQPS(X_c: np.ndarray, X_d: np.ndarray, L_inds: np.ndarray, L_vals: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
@@ -419,7 +433,7 @@ def _computeUserQPS(X_c: np.ndarray, X_d: np.ndarray, L_inds: np.ndarray, L_vals
     # Create pandas input if specified
     if pandas:
         inputs = pd.DataFrame(inputs, columns = pandas_cols)
-    ml_out = np.array(ml(inputs, **kwargs))
+    ml_out = np.squeeze(np.array(ml(inputs, **kwargs)))
 
     # Return means of every S rows
     qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
@@ -650,7 +664,8 @@ def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequen
         iter_args = zip(iter_c, iter_d, iter_L_ind, iter_L_val)
         p_out = p.starmap(computeUserQPS_frozen, iter_args)
         p.close()
-        qps_vec = np.array(p_out).flatten()
+        p.join()
+        qps_vec = np.concatenate(p_out)
 
     else:
         qps_vec = _computeUserQPS(X_c, X_d, mixed_og_inds, mixed_og_vals, ml, S, delta, mu, sigma, pandas, pandas_cols, order, reorder, **kwargs) # Compute QPS for each individual i

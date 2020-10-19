@@ -44,6 +44,9 @@ def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, in
     if fcn is not None:
         ml_out = fcn(ml_out, **kwargs)
 
+    # Remove unnecessary dims
+    ml_out = np.squeeze(ml_out)
+
     return ml_out
 
 def convert_to_onnx(model, framework: str, dummy_input1, dummy_input2 = None, path: str = None,
@@ -186,6 +189,43 @@ def convert_to_onnx(model, framework: str, dummy_input1, dummy_input2 = None, pa
         print(f"{framework} conversion not yet implemented for this function."
                "Please see https://github.com/onnx/onnxmltools for more conversion functions.")
         return False
+
+def olive_convert(model_name: str, framework: str, test_data_path: str = None, convert_from_pickle: bool = False, input_pickle: str = None,
+                  output_pickle: str = None, output_folder: str = None,
+                  model_path: str = "./", convert_directory: str = "./", convert_name: str = None, update_sdk: bool = False, **kwargs):
+    import os
+    import wget
+    import subprocess
+
+    url = "https://raw.githubusercontent.com/microsoft/OLive/master/utils/"
+    sdk_files = ["onnxpipeline.py", "convert_test_data.py", "config.py"]
+    sdk_dir = "./python_sdk"
+    if not os.path.exists(sdk_dir):
+        os.makedirs(sdk_dir)
+
+    for filename in sdk_files:
+        target_file = os.path.join(sdk_dir, filename)
+        if not os.path.exists(target_file) or update_sdk == True:
+            print("Downloading OLive Python SDK files...")
+            wget.download(url + filename, target_file)
+            print("Downloaded", filename)
+
+    # Pull latest onnx-converter image from mcr
+    print("Pulling latest onnx-converter image...")
+    subprocess.run(["docker", "pull", "mcr.microsoft.com/onnxruntime/onnx-converter"])
+
+    # Convert test data if toggled -- output path will be same directoy as converted model
+    if convert_from_pickle  == True:
+        pass
+
+    # Initiate conversion pipeline in convert directory
+    sys.path.append("./python_sdk")
+    import onnxpipeline
+
+    pipeline = onnxpipeline.Pipeline(model_path, convert_directory = convert_directory, convert_name = convert_name)
+
+    # Different frameworks require different inputs
+    model = pipeline.convert_model(model = model, model_type = framework)
 
 def _guess_numpy_type(data_type):
     """Guess the ONNX tensortype from the given numpy dtype"""

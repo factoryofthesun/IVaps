@@ -1,0 +1,7 @@
+{
+    "output_onnx_path": "/mnt/ssd_mobilenet.onnx",
+    "conversion_status": "SUCCESS",
+    "correctness_verified": "SKIPPED",
+    "input_folder": "",
+    "error_message": "Cannot auto generate inputs. Please provide your own input .pb files under output_onnx_path folder. "
+}

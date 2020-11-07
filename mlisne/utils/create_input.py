@@ -77,7 +77,7 @@ def generate_inputs(input_model_path, src_test_data, output_model_path):
 
     if not os.path.exists(test_path):
         os.mkdir(test_path)
-        os.chmod(test_path, 0o644)
+        os.chmod(test_path, 0o744)
     # Check if test folder and test data already exists
     regex = re.compile("test_data*")
     for f in os.listdir(output_test_data_dir):

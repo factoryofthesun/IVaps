@@ -1,5 +1,5 @@
 # Machine Learning is Natural Experiment
-**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)**
+**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://mlisne.readthedocs.io/en/latest/)**
 <details>
 <summary><strong>Table of Contents</strong></summary>
 

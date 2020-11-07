@@ -210,6 +210,6 @@ def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_r
     v_score = np.mean(v)
 
     if verbose:
-        print(f"Counterfactual value of new ML function: {v}")
+        print(f"Counterfactual value of new ML function: {v_score}")
 
     return (v, ols_results)

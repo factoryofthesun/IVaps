@@ -125,7 +125,11 @@ def onnxRunner(model, inputs_path):
     outputs = {}
     input_names = [sess.get_inputs()[i].name for i in range(len(sess.get_inputs()))]
     for i in sess.get_outputs():
-        outputs[i.name] = sess.run([i.name], gen_io_dict(inputs_path, input_names, True))[0]
+        onnx_out = sess.run([i.name], gen_io_dict(inputs_path, input_names, True))[0]
+        # Need to collapse dictionary outputs
+        if isinstance(onnx_out[0], dict):
+            onnx_out = np.array([[d[k] for k in d.keys()] for d in onnx_out])
+        outputs[i.name] = onnx_out
     return outputs
 
 

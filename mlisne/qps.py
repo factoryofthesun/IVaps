@@ -189,6 +189,10 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
     np.ndarray
         Array of estimated QPS for each observation in sample
 
+    Notes
+    ------
+    X_c, X_d, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
+
     """
     # Set X_c and X_d based on inputs
     if X_c is None and data is None:
@@ -294,7 +298,7 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
     if parallel == True:
         cpu = True
 
-        # # Need to force Windows implementation of spawning on Linux 
+        # # Need to force Windows implementation of spawning on Linux
         # import multiprocess.context as ctx
         # ctx._force_start_method('spawn')
 
@@ -521,11 +525,13 @@ def estimate_qps_user_defined(ml, X_c = None, X_d = None, data = None, C: Sequen
 
     Notes
     ------
+    X_c, X_d, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
+
     The arguments `keep_order`, `reorder`, and `pandas_cols` are applied sequentially, in that order. This means that if `keep_order` is set, then `reorder` will reorder the columns from the original column order as `data`. `pandas_cols` will then be the names of the new ordered dataset.
 
     The default ordering of inputs is [X_c, X_d], where the continuous variables and discrete variables will be in the original order regardless of how their input is passed. If `reorder` is called without `keep_order`, then the reordering will be performed on this default ordering.
 
-    Parallelization uses the `ProcessPoolExecutor` module from concurrent.futures, which will NOT be able to deal with execution on GPU. If the user function enables inference on GPU, then it is recommended to implement parallelization within the user function as well.
+    Parallelization uses the `Pool` module from pathos, which will NOT be able to deal with execution on GPU. If the user function enables inference on GPU, then it is recommended to implement parallelization within the user function as well.
 
     The optimal settings for nprocesses and nchunks are specific to each machine, and it is highly recommended that the user pass these arguments to maximize the performance boost. `This SO thread <https://stackoverflow.com/questions/42074501/python-concurrent-futures-processpoolexecutor-performance-of-submit-vs-map>`_ recommends setting nchunks to be 14 * # of workers for optimal performance.
     """

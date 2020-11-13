@@ -52,6 +52,8 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
 
     :math:`\\beta_1` is our causal estimation of the treatment effect. :math:`I` is an indicator for if the ML funtion takes only a single nondegenerate value in the sample.
 
+    qps, Y, Z, D, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
+
     """
     if data is not None:
         data = np.array(data)

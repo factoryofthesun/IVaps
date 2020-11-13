@@ -35,6 +35,8 @@ QPS Estimation
 
 The main QPS estimation functions are ``estimate_qps_onnx``, and ``estimate_qps_user_defined``, each serving different algorithmic use-cases. ``estimate_qps_onnx`` serves the case when an ONNX model with an optional post-prediction decision function produces the treatment recommendation. ``estimate_qps_user_defined`` serves the case when the user has a custom function that takes an array of ML inputs and outputs treatment recommendations. QPS estimation requires at minimum that we have ``X_c`` a collection of continuous variable data, ``S`` the number of draws per estimate, and ``delta`` the radius of the ball. As will be demonstrated below, however, there are a number of different ways that users can pass in data for estimation. Please refer to the documentation for the full list of keyword parameters and their default values.
 
+**Note:** ``data``, ``X_c``, and ``X_d`` should never have any overlapping columns. This is impossible to check in the code, so best practice is to use either ``data`` and index inputs ``C`` and ``D`` or ``X_c`` and ``X_d`` separately.
+
 .. code-block:: python
 
   import pandas as pd
@@ -148,6 +150,8 @@ IV Estimation
 ~~~~~~~~~~~~~
 
 Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. ``estimate_treatment_effect`` is our primary IV estimation function, and makes use of the IV2SLS class from the `linearmodels package <https://bashtage.github.io/linearmodels/>`_. As per the package, the function will return an IVResults object. Post-estimation diagnostics and statistics are accessible directly from this object. Please refer to the `object documentation <https://bashtage.github.io/linearmodels/doc/iv/results.html#linearmodels.iv.results.IVResults>`_ for a full list of accessible attributes.
+
+**Note:** Similar to QPS estimation, the inputs can be passed in through a combination of a ``data`` object or ``qps``, ``Y``, ``Z``, and ``D`` separately, but they must not have any overlapping columns. Recommended best practice is to use either ``data`` and index inputs ``qps_ind``, ``Y_ind``, ``Z_ind`` and ``D_ind`` or ``qps``, ``Y``, ``Z``, and ``D`` separately. 
 
 .. code-block:: python
 

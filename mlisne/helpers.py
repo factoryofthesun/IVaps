@@ -259,9 +259,34 @@ def convert_to_onnx(model, framework: str, dummy_input1 = None, dummy_input2 = N
         return False
 
 # Wraps check_model function in onnx_converter
-def check_conversion(model_path, onnx_model_path, framework, test_input_path: str = None,
+def check_conversion(model_path: str, onnx_model_path: str, framework: str, test_input_path: str = None,
                      tf_input_names: Sequence = None, tf_output_names: Sequence = None,
                      log_path: str = None):
+    """Check successful conversion of ONNX model
+
+    Parameters
+    -----------
+    model_path: str
+        Path to original saved model
+    onnx_model_path: str
+        Path to converted ONNX model
+    framework: str
+        Reference string for one of the implemented frameworks
+    test_input_path: str, default: None
+        Path to folder with saved .pb test inputs
+    tf_input_names: Sequence, default: None
+        Names of inputs for Tensorflow model, if applicable
+    tf_output_names: Sequence, default: None
+        Names of outputs for Tensorflow model, if applicable
+    log_path: str, default: None
+        Path to save test results 
+
+    Returns
+    -----------
+    bool
+        True if model passses all checks
+
+    """
     from mlisne.utils import check_model, generate_inputs
 
     output_template = {
@@ -304,19 +329,21 @@ def check_conversion(model_path, onnx_model_path, framework, test_input_path: st
 
     return True
 
-def convert_data_to_pb(pickle_path, output_folder="test_data_set_0", is_input=True):
-    """
-    Convert pickle test data file to ONNX .pb files.
-    Args:
-        pickle_path: The path to your pickle file. The pickle file should contain
-        a dictionary with the following format:
+def convert_data_to_pb(pickle_path: str, output_folder: str ="test_data_set_0", is_input=True):
+    """ Convert pickle test data file to ONNX .pb files.
+
+    Parameters
+    -----------
+    pickle_path: str
+        The path to your pickle file. The pickle file should contain a dictionary with the following format:
             {
                 input_name_1: test_data_1,
                 input_name_2: test_data_2,
                 ...
             }
-        output_folder: The folder to store .pb files. The folder should be empty
-        and its name starts with test_data_*. Default is "test_data_set_0".
+    output_folder: str, default: "test_data_set_0"
+        The folder to store .pb files. The folder should be empty and its name starts with test_data_*.
+
     """
     import pickle, os
 

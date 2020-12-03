@@ -101,6 +101,26 @@ The main QPS estimation functions are ``estimate_qps_onnx``, and ``estimate_qps_
   # We can parallelize QPS computation with a user defined function -- see documentation for more details
   qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5, parallel = True)
 
+Multiple Delta Estimation
+-------------------------
+
+In the case that the researcher wishes to estimate QPS using different sized deltas without having to call QPS estimation multiple times, both QPS estimation functions can take a list of delta values. In this case the same draws from a standard uniform ball will be used, scaled up by the different delta radii. The output QPS array will have shape (# observations, # deltas), with each column corresponding to the respective delta in the order of the input list.
+
+.. code-block:: python
+
+  import pandas as pd
+  import numpy as np
+  from mlisne import estimate_qps_onnx
+
+  delta_list = [0.1, 0.5, 0.8]
+  ml_path = "path_to_your_onnx_model.onnx"
+  data = pd.read_csv("path_to_your_historical_data.csv")
+
+  ### The below function calls will all output the same results
+  qps = estimate_qps_onnx(ml_path, X_c = data[['continuous', 'variables']], X_d = data[['discrete', 'variables']], S = 100, delta = delta_list)
+
+  assert qps.shape[1] == len(delta_list)
+
 Mixed Variables and Missing Values Treatment
 --------------------------------------------
 
@@ -151,7 +171,7 @@ IV Estimation
 
 Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. ``estimate_treatment_effect`` is our primary IV estimation function, and makes use of the IV2SLS class from the `linearmodels package <https://bashtage.github.io/linearmodels/>`_. As per the package, the function will return an IVResults object. Post-estimation diagnostics and statistics are accessible directly from this object. Please refer to the `object documentation <https://bashtage.github.io/linearmodels/doc/iv/results.html#linearmodels.iv.results.IVResults>`_ for a full list of accessible attributes.
 
-**Note:** Similar to QPS estimation, the inputs can be passed in through a combination of a ``data`` object or ``qps``, ``Y``, ``Z``, and ``D`` separately, but they must not have any overlapping columns. Recommended best practice is to use either ``data`` and index inputs ``qps_ind``, ``Y_ind``, ``Z_ind`` and ``D_ind`` or ``qps``, ``Y``, ``Z``, and ``D`` separately. 
+**Note:** Similar to QPS estimation, the inputs can be passed in through a combination of a ``data`` object or ``qps``, ``Y``, ``Z``, and ``D`` separately, but they must not have any overlapping columns. Recommended best practice is to use either ``data`` and index inputs ``qps_ind``, ``Y_ind``, ``Z_ind`` and ``D_ind`` or ``qps``, ``Y``, ``Z``, and ``D`` separately.
 
 .. code-block:: python
 

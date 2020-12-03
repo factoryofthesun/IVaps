@@ -177,6 +177,24 @@ qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5)
 qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5, parallel = True)
 ```
 
+### Mixed Variables and Missing Values Treatment
+QPS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary `L`, where the keys are the indices of `X_c` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
+
+```python
+import pandas as pd
+import numpy as np
+from mlisne import estimate_qps_onnx
+
+data_with_missing = pd.read_csv("path_to_your_historical_data_with_missing.csv")
+ml_path = "path_to_your_onnx_model.onnx"
+
+# Create mixed variables dictionary
+L = {0: {0}, 3: {5, 10}} # This indicates that the 0th and 3rd index continuous variables are mixed variables with the passed discrete parts
+
+# QPS estimation
+qps = estimate_qps_onnx(ml_path, data = data_with_missing, L = L)
+```
+
 ### Pandas Compatibility
 Sometimes the custom user function may require a pandas dataframe as an input and be column-order or column-name sensitive. Below are examples of how to pass these options into QPS estimation.
 ```python

@@ -29,7 +29,8 @@ def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, in
 
     Returns
     -----------
-    Outputs of ONNX inference or fcn
+    np.ndarray
+        Outputs of ONNX inference or post-inference function
 
     """
 
@@ -82,8 +83,8 @@ def convert_to_onnx(model, framework: str, dummy_input1 = None, dummy_input2 = N
 
     Returns
     -----------
-    ONNX model
-        Flag indicating successful conversion
+    Object
+        Converted ONNX model or boolean flag indicating successful conversion, depending on specific framework.
 
     """
 
@@ -279,7 +280,7 @@ def check_conversion(model_path: str, onnx_model_path: str, framework: str, test
     tf_output_names: Sequence, default: None
         Names of outputs for Tensorflow model, if applicable
     log_path: str, default: None
-        Path to save test results 
+        Path to save test results
 
     Returns
     -----------

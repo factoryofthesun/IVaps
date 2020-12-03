@@ -55,8 +55,8 @@ def _computeQPS(onnx, X_c: np.ndarray, X_d: np.ndarray, L_inds: Tuple[np.ndarray
 
     Returns
     -----------
-    float
-        Estimated qps for the observation row
+    np.ndarray
+        Estimated qps for the observation row. If list of deltas given, then returns 2D array with every column corresponding to a different delta. Otherwise, returns 1D array.
 
     """
     # =================================== QPS estimation with full matrix form ==================================
@@ -71,17 +71,34 @@ def _computeQPS(onnx, X_c: np.ndarray, X_d: np.ndarray, L_inds: Tuple[np.ndarray
     na_counts = np.apply_along_axis(lambda row: np.sum(row), axis = 1, arr = np.isnan(X_c)) # Get NA counts per row
     non_na_cts = p_c - na_counts # Count of non-na draws for each row
     u = np.random.uniform(size=(nrows, S))**(np.divide(1, non_na_cts, out=np.array([np.nan]*len(na_counts)), where=non_na_cts!=0))[:,np.newaxis] # nrows x S draws from Unif(0,1) then send to power depending on NA in row
-    uniform_draws = scaled_draws * u[:,:,None] * delta + X_c[:,None,:] # Scale by sampled u and ball mean/radius to get the final uniform draws (S x p_c)
+
+    # If list of deltas, then create new set of draws for each
+    if isinstance(delta, Sequence):
+        uniform_draws = [scaled_draws * u[:,:,None] * d + X_c[:,None,:] for d in delta]
+        multi_delta = True
+    else:
+        uniform_draws = scaled_draws * u[:,:,None] * delta + X_c[:,None,:] # Scale by sampled u and ball mean/radius to get the final uniform draws (S x p_c)
+        multi_delta = False
 
     # De-standardize each of the variables
-    destandard_draws = np.add(np.multiply(uniform_draws, sigma), mu) # This applies the transformations continuous variable-wise
+    if multi_delta == True:
+        destandard_draws = [np.add(np.multiply(unif, sigma), mu) for unif in uniform_draws]
+    else:
+        destandard_draws = np.add(np.multiply(uniform_draws, sigma), mu) # This applies the transformations continuous variable-wise
 
     # Add back the original discrete mixed values
     if L_inds is not None:
-        destandard_draws[L_inds[0], :, L_inds[1]] = L_vals[:,np.newaxis]
+        if multi_delta == True:
+            for d in destandard_draws:
+                d[L_inds[0], :, L_inds[1]] = L_vals[:,np.newaxis]
+        else:
+            destandard_draws[L_inds[0], :, L_inds[1]] = L_vals[:,np.newaxis]
 
     # Collapse to 2D for inference
-    inference_draws = destandard_draws.reshape((nrows*S, p_c))
+    if multi_delta == True:
+        inference_draws_list = [d.reshape((nrows*S, p_c)) for d in destandard_draws]
+    else:
+        inference_draws = destandard_draws.reshape((nrows*S, p_c))
 
     # Run ONNX inference ----------------------------------------------------------------------------------------------------------
     sess = rt.InferenceSession(onnx)
@@ -110,27 +127,55 @@ def _computeQPS(onnx, X_c: np.ndarray, X_d: np.ndarray, L_inds: Tuple[np.ndarray
         label_name = sess.get_outputs()[0].name
     input_name = sess.get_inputs()[0].name
 
-    # Adapt input based on settings
-    if X_d is None:
-        inputs = inference_draws.astype(cts_type)
-        ml_out = run_onnx_session([inputs], sess, [input_name], [label_name], fcn, **kwargs)
+    if multi_delta == True:
+        ml_out_list = []
+        for inference_draws in inference_draws_list:
+            # Adapt input based on settings
+            if X_d is None:
+                inputs = inference_draws.astype(cts_type)
+                ml_out = run_onnx_session([inputs], sess, [input_name], [label_name], fcn, **kwargs)
+            else:
+                X_d_long = np.repeat(X_d, destandard_draws[0].shape[1], axis=0)
+                if input_type == 2:
+                    disc_inputs = X_d_long.astype(disc_type)
+                    cts_inputs = inference_draws.astype(cts_type)
+                    ml_out = run_onnx_session([cts_inputs, disc_inputs], sess, input_names, [label_name], fcn, **kwargs)
+                else:
+                    # If input type = 1, then coerce all to the continuous type
+                    inputs = np.append(inference_draws, X_d_long, axis=1).astype(cts_type)
+                    ml_out = run_onnx_session([inputs], sess, [input_name], [label_name], fcn, **kwargs)
+            ml_out_list.append(ml_out)
     else:
-        X_d_long = np.repeat(X_d, destandard_draws.shape[1], axis=0)
-        if input_type == 2:
-            disc_inputs = X_d_long.astype(disc_type)
-            cts_inputs = inference_draws.astype(cts_type)
-            ml_out = run_onnx_session([cts_inputs, disc_inputs], sess, input_names, [label_name], fcn, **kwargs)
-        else:
-            # If input type = 1, then coerce all to the continuous type
-            inputs = np.append(inference_draws, X_d_long, axis=1).astype(cts_type)
+        # Adapt input based on settings
+        if X_d is None:
+            inputs = inference_draws.astype(cts_type)
             ml_out = run_onnx_session([inputs], sess, [input_name], [label_name], fcn, **kwargs)
+        else:
+            X_d_long = np.repeat(X_d, destandard_draws.shape[1], axis=0)
+            if input_type == 2:
+                disc_inputs = X_d_long.astype(disc_type)
+                cts_inputs = inference_draws.astype(cts_type)
+                ml_out = run_onnx_session([cts_inputs, disc_inputs], sess, input_names, [label_name], fcn, **kwargs)
+            else:
+                # If input type = 1, then coerce all to the continuous type
+                inputs = np.append(inference_draws, X_d_long, axis=1).astype(cts_type)
+                ml_out = run_onnx_session([inputs], sess, [input_name], [label_name], fcn, **kwargs)
 
     # Explicitly delete ONNX session
     del sess
 
     # Return means of every S rows
-    qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
-    qps[1:] = qps[1:] - qps[:-1]
+    if multi_delta == True:
+        qps_list = []
+        for ml_out in ml_out_list:
+            qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
+            qps[1:] = qps[1:] - qps[:-1]
+            qps_list.append(qps)
+        qps = np.column_stack(qps_list)
+    else:
+        qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
+        qps[1:] = qps[1:] - qps[:-1]
+
     return qps
 
 def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequence = None, D: Sequence = None, L: Dict[int, Set] = None,
@@ -161,8 +206,8 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
         Dictionary with keys as indices of X_c and values as sets of discrete values
     S: int, default: 100
         Number of draws for each QPS estimation
-    delta: float, default: 0.8
-        Radius of sampling ball
+    delta: float/list, default: 0.8
+        Radius of sampling ball. If list, then QPS is recomputed for each delta in list.
     seed: int, default: None
         Seed for sampling
     types: Tuple[np.dtype, np.dtype], default: (None, None)
@@ -352,7 +397,7 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
 
 def _computeUserQPS(X_c: np.ndarray, X_d: np.ndarray, L_inds: np.ndarray, L_vals: np.ndarray, ml, S: int, delta: float, mu: np.ndarray, sigma: np.ndarray,
                     pandas:  bool, pandas_cols: Sequence, order: Sequence, reorder: Sequence, **kwargs):
-    """Compute QPS for a single row of data, using a user-defined input function.
+    """Compute QPS using a user-defined input function.
 
     Quasi-propensity score estimation involves taking draws :math:`X_c^1, \\ldots,X_c^S` from the uniform distribution on :math:`N(X_{ci}, \\delta)`, where :math:`N(X_{ci},\\delta)` is the :math:`p_c` dimensional ball centered at :math:`X_{ci}` with radius :math:`\\delta`.
 
@@ -408,40 +453,84 @@ def _computeUserQPS(X_c: np.ndarray, X_d: np.ndarray, L_inds: np.ndarray, L_vals
     na_counts = np.apply_along_axis(lambda row: np.sum(row), axis = 1, arr = np.isnan(X_c)) # Get NA counts per row
     non_na_cts = p_c - na_counts # Count of non-na draws for each row
     u = np.random.uniform(size=(nrows, S))**(np.divide(1, non_na_cts, out=np.array([np.nan]*len(na_counts)), where=non_na_cts!=0))[:,np.newaxis] # nrows x S draws from Unif(0,1) then send to power depending on NA in row
-    uniform_draws = scaled_draws * u[:,:,None] * delta + X_c[:,None,:] # Scale by sampled u and ball mean/radius to get the final uniform draws (S x p_c)
+
+    # If list of deltas, then create new set of draws for each
+    if isinstance(delta, Sequence):
+        uniform_draws = [scaled_draws * u[:,:,None] * d + X_c[:,None,:] for d in delta]
+        multi_delta = True
+    else:
+        uniform_draws = scaled_draws * u[:,:,None] * delta + X_c[:,None,:] # Scale by sampled u and ball mean/radius to get the final uniform draws (S x p_c)
+        multi_delta = False
 
     # De-standardize each of the variables
-    destandard_draws = np.add(np.multiply(uniform_draws, sigma), mu) # This applies the transformations continuous variable-wise
+    if multi_delta == True:
+        destandard_draws = [np.add(np.multiply(unif, sigma), mu) for unif in uniform_draws]
+    else:
+        destandard_draws = np.add(np.multiply(uniform_draws, sigma), mu) # This applies the transformations continuous variable-wise
 
     # Add back the original discrete mixed values
     if L_inds is not None:
-        destandard_draws[L_inds[0], :, L_inds[1]] = L_vals[:,np.newaxis]
+        if multi_delta == True:
+            for d in destandard_draws:
+                d[L_inds[0], :, L_inds[1]] = L_vals[:,np.newaxis]
+        else:
+            destandard_draws[L_inds[0], :, L_inds[1]] = L_vals[:,np.newaxis]
 
     # Collapse to 2D for inference
-    inference_draws = destandard_draws.reshape((nrows*S, p_c))
+    if multi_delta == True:
+        inference_draws_list = [d.reshape((nrows*S, p_c)) for d in destandard_draws]
+    else:
+        inference_draws = destandard_draws.reshape((nrows*S, p_c))
 
     # Run ML inference ----------------------------------------------------------------------------------------------------------
     # We will assume that ML always takes a single concatenated matrix as input
-    if X_d is None:
-        inputs = inference_draws
+    if multi_delta == True:
+        qps_list = []
+        for inference_draws in inference_draws_list:
+            if X_d is None:
+                inputs = inference_draws
+            else:
+                X_d_long = np.repeat(X_d, destandard_draws[0].shape[1], axis=0)
+                inputs = np.append(inference_draws, X_d_long, axis=1)
+
+            # Reorder if specified
+            if order is not None:
+                inputs = inputs[:,order]
+            if reorder is not None:
+                inputs = inputs[:,reorder]
+
+            # Create pandas input if specified
+            if pandas:
+                inputs = pd.DataFrame(inputs, columns = pandas_cols)
+            ml_out = np.squeeze(np.array(ml(inputs, **kwargs)))
+
+            # Return means of every S rows
+            qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
+            qps[1:] = qps[1:] - qps[:-1]
+            qps_list.append(qps)
+        qps = np.column_stack(qps_list)
     else:
-        X_d_long = np.repeat(X_d, destandard_draws.shape[1], axis=0)
-        inputs = np.append(inference_draws, X_d_long, axis=1)
+        if X_d is None:
+            inputs = inference_draws
+        else:
+            X_d_long = np.repeat(X_d, destandard_draws.shape[1], axis=0)
+            inputs = np.append(inference_draws, X_d_long, axis=1)
 
-    # Reorder if specified
-    if order is not None:
-        inputs = inputs[:,order]
-    if reorder is not None:
-        inputs = inputs[:,reorder]
+        # Reorder if specified
+        if order is not None:
+            inputs = inputs[:,order]
+        if reorder is not None:
+            inputs = inputs[:,reorder]
 
-    # Create pandas input if specified
-    if pandas:
-        inputs = pd.DataFrame(inputs, columns = pandas_cols)
-    ml_out = np.squeeze(np.array(ml(inputs, **kwargs)))
+        # Create pandas input if specified
+        if pandas:
+            inputs = pd.DataFrame(inputs, columns = pandas_cols)
+        ml_out = np.squeeze(np.array(ml(inputs, **kwargs)))
 
-    # Return means of every S rows
-    qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
-    qps[1:] = qps[1:] - qps[:-1]
+        # Return means of every S rows
+        qps = np.cumsum(ml_out, 0)[S-1::S]/float(S)
+        qps[1:] = qps[1:] - qps[:-1]
+
     return qps
 
 def _get_og_order(n, C, D):

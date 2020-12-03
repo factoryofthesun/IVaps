@@ -18,13 +18,14 @@ The ML-agnostic QPS estimation function ``estimate_qps_onnx`` only accepts model
 
 - `Sklearn <https://github.com/onnx/sklearn-onnx/>`_
 - `Pytorch <https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html>`_
+- `Tensorflow <https://github.com/tensorflow>`_
 - `LightGBM <https://github.com/microsoft/LightGBM>`_
+- `Keras <https://keras.io/>`_
 - `XGBoost (experimental) <https://github.com/dmlc/xgboost>`_
 - `CatBoost (experimental) <https://github.com/catboost/catboost>`_
 - `CoreML (experimental) <https://github.com/apple/coremltools>`_
 - `LibSVM (experimental) <https://github.com/cjlin1/libsvm>`_
 - `SparkML (experimental) <https://spark.apache.org/mllib/>`_
-- `Keras (experimental) <https://keras.io/>`_
 
 For conversion functions for other frameworks, please refer to the `onnxmltools repository <https://github.com/onnx/onnxmltools>`_.
 Please note that use of these functions requires that the relevant framework packages are installed.

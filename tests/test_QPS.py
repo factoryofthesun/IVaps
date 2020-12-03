@@ -13,7 +13,6 @@ import onnxruntime as rt
 from pathlib import Path
 
 from mlisne import estimate_qps_onnx, estimate_qps_user_defined
-from mlisne.qps_old import _estimate_qps_onnx, _estimate_qps_user_defined
 from mlisne.qps import _get_og_order
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
@@ -272,82 +271,54 @@ def test_user_parallel(iris_dataset):
 
     assert len(qps) == len(qps_parallel) == len(qps_parallel_2) == len(qps_parallel_3)
 
-def test_onnx_parallel(iris_dataset):
-    import time
-
-    seed = np.random.choice(range(100))
-    data = iris_dataset.drop("y", axis = 1)
-    data = pd.concat([data]*30, ignore_index = True)
-
-    t0 = time.time()
-    qps_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), parallel = True)
-    t1 = time.time()
-    print("Parallelized ONNX runtime with default workers:", t1-t0)
-
-    t0 = time.time()
-    qps_p2 = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), parallel = True)
-    t1 = time.time()
-    print("Parallelized ONNX runtime with default workers (seed):", t1-t0)
-
-    t0 = time.time()
-    qps_p3 = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, seed = seed, types=(np.float32,None), parallel = True, nprocesses = 4)
-    t1 = time.time()
-    print("Parallelized runtime with 4 workers:", t1-t0)
-
-    assert len(qps_p) == len(qps_p2) == len(qps_p3)
-
-# TODO: FIX PYTEST ISSUE
-# def test_onnx_compare(iris_dataset):
+# def test_onnx_parallel(iris_dataset):
 #     import time
-#     seed = np.random.choice(range(100))
 #
+#     seed = np.random.choice(range(100))
 #     data = iris_dataset.drop("y", axis = 1)
-#     data = pd.concat([data]*100, ignore_index = True)
+#     data = pd.concat([data]*30, ignore_index = True)
 #
 #     t0 = time.time()
-#     qps_new = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None))
+#     qps_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), parallel = True)
 #     t1 = time.time()
-#     print("New QPS onnx runtime:", t1-t0)
+#     print("Parallelized ONNX runtime with default workers:", t1-t0)
 #
 #     t0 = time.time()
-#     qps_new_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), parallel = True)
+#     qps_p2 = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), parallel = True)
 #     t1 = time.time()
-#     print("New QPS onnx parallelized runtime:", t1-t0)
-#
-#     assert len(qps_new) == len(qps_new_p) == len(qps_old)
-#
-#     seed = np.random.choice(range(100))
-#     # Set second continuous variable as mixed
-#     L = {1:{3.0,4.0}}
+#     print("Parallelized ONNX runtime with default workers (seed):", t1-t0)
 #
 #     t0 = time.time()
-#     qps_new = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), L = L)
+#     qps_p3 = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), parallel = True, nprocesses = 4)
 #     t1 = time.time()
-#     print("New QPS onnx runtime with mixed vars:", t1-t0)
+#     print("Parallelized runtime with 4 workers:", t1-t0)
 #
-#     t0 = time.time()
-#     qps_new_p = estimate_qps_onnx(data = data, S=100, delta=0.8, onnx=sklearn_logreg, types=(np.float32,None), L = L, parallel = True)
-#     t1 = time.time()
-#     print("New QPS onnx parallelized runtime with mixed vars:", t1-t0)
-#
-#     assert len(qps_new) == len(qps_new_p) == len(qps_old)
+#     assert len(qps_p) == len(qps_p2) == len(qps_p3)
 
-def test_user_compare(iris_dataset):
-    import time
+def test_multiple_deltas(iris_dataset):
+    seed = np.random.choice(range(100))
+    qps1 = estimate_qps_onnx(data = iris_dataset.drop("y", axis=1), S=100, delta=[0.1,0.5,0.8], onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
+    qps2 = estimate_qps_onnx(data = iris_dataset.drop("y", axis=1), S=100, delta=[0.1,0.5,0.8], onnx=sklearn_logreg, seed = seed, types=(np.float32,None))
+    assert np.array_equal(qps1, qps2)
 
+def test_multiple_deltas_parallel(iris_dataset):
+    qps1 = estimate_qps_onnx(data = iris_dataset.drop("y", axis=1), S=100, delta=[0.1,0.5,0.8], onnx=sklearn_logreg, types=(np.float32,None), parallel=True)
+    qps2 = estimate_qps_onnx(data = iris_dataset.drop("y", axis=1), S=100, delta=[0.1,0.5,0.8], onnx=sklearn_logreg, types=(np.float32,None), parallel=True)
+
+    assert qps2.shape == qps1.shape
+
+def test_user_multiple_deltas(iris_dataset):
     seed = np.random.choice(range(100))
     model = pickle.load(open(f"{model_path}/iris_logreg.pickle", 'rb'))
     data = iris_dataset.drop("y", axis = 1)
-    data = pd.concat([data]*100, ignore_index = True)
+    data = pd.concat([data]*30, ignore_index = True)
+    L = {1:{3.0,4.0}}
 
-    t0 = time.time()
-    qps_new = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, c = 0.5, seed = seed, model = model)
-    t1 = time.time()
-    print("New QPS runtime:", t1-t0)
+    qps1 = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, delta=[0.1,0.5,0.8], c = 0.5, seed = seed, L = L, model = model)
+    qps2 = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, delta=[0.1,0.5,0.8], c = 0.5, seed = seed, L = L, model = model)
+    assert np.array_equal(qps1, qps2)
+    assert qps1.shape[1] == qps2.shape[1] == 3
 
-    t0 = time.time()
-    qps_new_p = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, c = 0.5, seed = seed, model = model, parallel = True)
-    t1 = time.time()
-    print("New parallelized runtime with default batching:", t1-t0)
-
-    assert len(qps_new) == len(qps_new_p)
+    qps1 = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, delta=[0.1,0.5,0.8], c = 0.5, seed = seed, model = model, L = L, parallel = True)
+    qps2 = estimate_qps_user_defined(ml_round, data = data, C = range(3), D = 3, delta=[0.1,0.5,0.8], c = 0.5, seed = seed, model = model, L = L, parallel = True)
+    assert qps1.shape == qps2.shape

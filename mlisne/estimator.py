@@ -99,14 +99,22 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
         lm_inp = add_constant(lm_inp)
 
     if estimator == "2SLS":
-        iv_results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'qps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
+        if single_nondegen:
+            results = IV2SLS(lm_inp['Y'], lm_inp[['qps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
+        else:
+            results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'qps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
+    elif estimator == "OLS":
+        if single_nondegen:
+            results = IV2SLS(lm_inp['Y'], lm_inp[['Z', 'qps']], None, None).fit(cov_type='unadjusted')
+        else:
+            results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'Z', 'qps']], None, None).fit(cov_type='unadjusted')
     else:
         raise NotImplementedError(f"Estimator option {estimator} not implemented yet!")
 
     if verbose:
-        print(iv_results)
+        print(results)
 
-    return iv_results
+    return results
 
 def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_recs = None, data = None, Y_ind = None, Z_ind = None, recs_ind = None, cf_recs_ind = None, qps_ind = None,
                                cov_type: str = "unadjusted", single_nondegen: bool = False, verbose: bool = True):

@@ -337,11 +337,11 @@ def convert_data_to_pb(pickle_path: str, output_folder: str ="test_data_set_0", 
     -----------
     pickle_path: str
         The path to your pickle file. The pickle file should contain a dictionary with the following format:
-            {
-                input_name_1: test_data_1,
-                input_name_2: test_data_2,
-                ...
-            }
+        \\{
+        input_name_1: test_data_1,
+        input_name_2: test_data_2,
+        ...
+        \\}
     output_folder: str, default: "test_data_set_0"
         The folder to store .pb files. The folder should be empty and its name starts with test_data_*.
 

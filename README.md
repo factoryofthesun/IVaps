@@ -57,7 +57,7 @@ The Quasi-Propensity Score (QPS) is an object that captures all the experimental
 
 Narita 20 proposes an instrumental variables approach to causal effect estimation. In particular, a 2SLS regression framework instrumenting treatment assignment with the algorithmic recommendation, controlling for estimated QPS. 
 <p align="center" width = "100%">
-  <img src="/images/framework_2sls.PNG" width="40%" height="40%"/>
+  <img src="/images/framework_2sls.png" width="40%" height="40%"/>
 </p>
 
 For more detail on the theoretical framework, please refer to the paper "Machine Learning is Natural Experiment" (Narita and Yata, forthcoming) or the [method page](https://mlisne.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
@@ -70,13 +70,14 @@ The QPS estimation function for trained models `estimate_qps_onnx` only accepts 
 
 - [Sklearn](https://github.com/onnx/sklearn-onnx/)
 - [Pytorch](https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html)
+- [Tensorflow](https://github.com/onnx/tensorflow-onnx)
+- [Keras](https://keras.io/)
 - [LightGBM](https://github.com/microsoft/LightGBM)
 - [XGBoost (experimental)](https://github.com/dmlc/xgboost)
 - [CatBoost (experimental)](https://github.com/catboost/catboost)
 - [CoreML (experimental)](https://github.com/apple/coremltools)
 - [LibSVM (experimental)](https://github.com/cjlin1/libsvm)
 - [SparkML (experimental)](https://spark.apache.org/mllib/)
-- [Keras (experimental)](https://keras.io/)
 
 For conversion functions for other frameworks, please refer to the [onnxmltools repository](https://github.com/onnx/onnxmltools).
 Please note that `convert_to_onnx` requires that the relevant framework packages are installed.
@@ -97,6 +98,7 @@ pip install -e ./
 The installation will automatically detect whether there is a compatible GPU device on the system and install either onnxruntime or onnxruntime-gpu. Please note that the default onnxruntime GPU build requires CUDA runtime libraries being installed on the system. Please see the [onnxruntime repository](https://github.com/microsoft/onnxruntime) for more details regarding the GPU build.
 
 # Requirements
+Installation requires Python version >=3.5 and <3.8, in order to be compatible with the latest version of onnxruntime. The statsmodels package serves as the backbone of the estimation procedure. CPU and GPU inference using onnxruntime require certain system requirements depending on the OS, which you can read more about in the [onnxruntime repository](https://github.com/microsoft/onnxruntime).
 
 # Usage
 Below is a general example of how to use the modules in this package to estimate LATE, given a converted ONNX model and historical treatment data.

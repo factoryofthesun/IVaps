@@ -97,7 +97,7 @@ pip install -e ./
 ```
 The installation will automatically detect whether there is a compatible GPU device on the system and install either onnxruntime or onnxruntime-gpu. Please note that the default onnxruntime GPU build requires CUDA runtime libraries being installed on the system. Please see the [onnxruntime repository](https://github.com/microsoft/onnxruntime) for more details regarding the GPU build.
 
-# Requirements
+## Requirements
 Installation requires Python version >=3.5 and <3.8, in order to be compatible with the latest version of onnxruntime. The statsmodels package serves as the backbone of the estimation procedure. CPU and GPU inference using onnxruntime require certain system requirements depending on the OS, which you can read more about in the [onnxruntime repository](https://github.com/microsoft/onnxruntime).
 
 # Usage

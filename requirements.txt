@@ -2,6 +2,7 @@ numpy>=1.18.5
 onnx>=1.7.0
 onnxconverter-common>=1.7.0
 onnxmltools>=1.7.0
+onnxruntime>=1.5.0
 pandas>=1.0.5
 linearmodels>=4.0.0
 statsmodels>=0.12.0

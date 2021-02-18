@@ -334,7 +334,7 @@ def estimate_qps_onnx(onnx: str, X_c = None, X_d = None, data = None, C: Sequenc
     # Formula: (X_ik - u_k)/o_k; k represents a continuous variable
     mu = np.nanmean(X_c, axis=0)
     sigma = np.nanstd(X_c, axis=0)
-    X_c = np.apply_along_axis(lambda row: np.divide(np.subtract(row, mu), sigma), axis=1, arr=X_c)
+    X_c = (X_c - mu)/sigma
 
     if seed is not None:
         np.random.seed(seed)

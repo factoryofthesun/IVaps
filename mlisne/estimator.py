@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 
 def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = None, Y_ind = None, Z_ind = None, D_ind = None, qps_ind = None,
-                              estimator: str = "2SLS", single_nondegen: bool = False,
-                              verbose: bool = True):
+                              estimator: str = "2SLS", verbose: bool = True):
     """Main treatment effect estimation function
 
     Parameters
@@ -31,8 +30,6 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
         Index of QPS variable in `data`
     estimator: str, default: "2SLS"
         Method of IV estimation
-    single_nondegen: bool, default: False
-        Indicator for whether the ML algorithm takes on a single non-degenerate value in the sample
     verbose: bool, default: True
         Whether to print output of estimation
 
@@ -95,7 +92,10 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
 
     lm_inp = lm_inp.iloc[obs_tokeep[0],:]
 
-    if not single_nondegen:
+    # Check for single non-degeneracy
+    single_nondegen = True
+    if len(np.unique(qps[obs_tokeep])) > 1:
+        single_nondegen = False
         lm_inp = add_constant(lm_inp)
 
     if estimator == "2SLS":

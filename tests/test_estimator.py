@@ -13,7 +13,7 @@ from linearmodels.iv import IV2SLS
 import statsmodels.api as sm
 
 from mlisne import estimate_qps_onnx, estimate_qps_user_defined
-from mlisne import estimate_treatment_effect, estimate_counterfactual_ml
+from mlisne import estimate_treatment_effect, estimate_counterfactual_ml, covariate_balance_test
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")
@@ -320,3 +320,21 @@ def test_counterfactual_infer_positions(iris_data):
     assert np.allclose(t2.to_numpy().flatten(), t3.to_numpy().flatten())
     assert np.allclose(r22, r33)
     assert np.allclose(cf_values2, cf_values3)
+
+def test_covariate_balance(iris_data):
+    qps = estimate_qps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
+    iris_data['qps'] = qps
+
+    res = covariate_balance_test(qps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'])
+    res2 = covariate_balance_test(qps, iris_data[["X1"]], iris_data['Z'])
+    res3 = covariate_balance_test(qps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'], cov_type = "aldsfla",
+                                X_labels = ["var1", "var2", "var3", "var4"], verbose=False)
+    with pytest.raises(ValueError):
+        res3 = covariate_balance_test(qps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'], cov_type = "aldsfla",
+                                    X_labels = ["var1", "var2", "var3", "var4", "var5"], verbose=False)
+    with pytest.raises(ValueError):
+        res3 = covariate_balance_test(qps, data = iris_data[["X1", "X2", "X3", "X4"]], Z = iris_data['Z'])
+
+    assert all([k in ['joint', 'X1', 'X2', 'X3', 'X4'] for k in res[1].keys()])
+    assert all([k in ['joint', 'X1'] for k in res2[1].keys()])
+    assert all([k in ['joint', "var1", "var2", "var3", "var4"] for k in res3[1].keys()])

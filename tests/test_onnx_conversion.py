@@ -11,7 +11,7 @@ import onnxruntime as rt
 from pathlib import Path
 import torch
 import torch.nn as nn
-from mlisne.helpers import convert_to_onnx
+from IVaps.helpers import convert_to_onnx
 
 model_path = str(Path(__file__).resolve().parents[1] / "examples" / "models")
 data_path = str(Path(__file__).resolve().parents[1] / "examples" / "data")

@@ -5,14 +5,14 @@ from statsmodels.api import add_constant
 import numpy as np
 import pandas as pd
 
-def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = None, Y_ind = None, Z_ind = None, D_ind = None, qps_ind = None,
+def estimate_treatment_effect(aps = None, Y = None, Z = None, D = None, data = None, Y_ind = None, Z_ind = None, D_ind = None, aps_ind = None,
                               estimator: str = "2SLS", verbose: bool = True):
     """Main treatment effect estimation function
 
     Parameters
     -----------
-    qps: array-like, default: None
-        Array of estimated QPS values
+    aps: array-like, default: None
+        Array of estimated APS values
     Y: array-like, default: None
         Array of outcome variables
     Z: array-like, default: None
@@ -27,8 +27,8 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
         Index of treatment recommendation variable in `data`
     D_ind: int, default: None
         Index of treatment assignment variable in `data`
-    qps_ind: int, default: None
-        Index of QPS variable in `data`
+    aps_ind: int, default: None
+        Index of APS variable in `data`
     estimator: str, default: "2SLS"
         Method of IV estimation
     verbose: bool, default: True
@@ -36,8 +36,8 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
 
     Returns
     -----------
-    tuple(np.ndarray, IVResults)
-        Tuple containing array of predicted float value scores and fitted IV results.
+    IVResults
+        Fitted IV model object
 
     Notes
     -----
@@ -50,19 +50,19 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
 
     :math:`\\beta_1` is our causal estimation of the treatment effect. :math:`I` is an indicator for if the ML funtion takes only a single nondegenerate value in the sample.
 
-    qps, Y, Z, D, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
+    aps, Y, Z, D, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
 
     """
     if data is not None:
         data = np.array(data)
 
-    vals = {"Y": Y, "Z": Z, "D": D, "QPS": qps}
+    vals = {"Y": Y, "Z": Z, "D": D, "APS": aps}
 
     # If `data` given, then use index inputs for values not explicitly passed
     infer = []
     to_del = []
     if data is not None:
-        inds = {"Y": Y_ind, "Z": Z_ind, "D": D_ind, "QPS": qps_ind}
+        inds = {"Y": Y_ind, "Z": Z_ind, "D": D_ind, "APS": aps_ind}
         for key, val in vals.items():
             if val is None:
                 if inds[key] is not None:
@@ -78,37 +78,37 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
     Y = vals["Y"]
     Z = vals["Z"]
     D = vals["D"]
-    qps = vals["QPS"]
+    aps = vals["APS"]
 
-    if qps is None or Y is None or Z is None or D is None:
-        raise ValueError("Treatment effect estimation requires all values qps, Y, Z, and D to be passed!")
+    if aps is None or Y is None or Z is None or D is None:
+        raise ValueError("Treatment effect estimation requires all values aps, Y, Z, and D to be passed!")
 
-    lm_inp = pd.DataFrame({"Y": Y, "Z": Z, "D": D, "qps": qps})
+    lm_inp = pd.DataFrame({"Y": Y, "Z": Z, "D": D, "aps": aps})
 
-    # Use only observations where qps is nondegenerate
-    qps = np.array(qps)
-    obs_tokeep = np.nonzero((qps > 0) & (qps < 1))
-    print(f"We will fit on {len(obs_tokeep[0])} values out of {len(Y)} from the dataset for which the QPS estimation is nondegenerate.")
+    # Use only observations where aps is nondegenerate
+    aps = np.array(aps)
+    obs_tokeep = np.nonzero((aps > 0) & (aps < 1))
+    print(f"We will fit on {len(obs_tokeep[0])} values out of {len(Y)} from the dataset for which the APS estimation is nondegenerate.")
     assert len(obs_tokeep[0]) > 0
 
     lm_inp = lm_inp.iloc[obs_tokeep[0],:]
 
     # Check for single non-degeneracy
     single_nondegen = True
-    if len(np.unique(qps[obs_tokeep])) > 1:
+    if len(np.unique(aps[obs_tokeep])) > 1:
         single_nondegen = False
         lm_inp = add_constant(lm_inp)
 
     if estimator == "2SLS":
         if single_nondegen:
-            results = IV2SLS(lm_inp['Y'], lm_inp[['qps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
+            results = IV2SLS(lm_inp['Y'], lm_inp[['aps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
         else:
-            results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'qps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
+            results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'aps']], lm_inp['D'], lm_inp['Z']).fit(cov_type='robust')
     elif estimator == "OLS":
         if single_nondegen:
-            results = IV2SLS(lm_inp['Y'], lm_inp[['Z', 'qps']], None, None).fit(cov_type='unadjusted')
+            results = IV2SLS(lm_inp['Y'], lm_inp[['Z', 'aps']], None, None).fit(cov_type='unadjusted')
         else:
-            results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'Z', 'qps']], None, None).fit(cov_type='unadjusted')
+            results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'Z', 'aps']], None, None).fit(cov_type='unadjusted')
     else:
         raise NotImplementedError(f"Estimator option {estimator} not implemented yet!")
 
@@ -117,21 +117,22 @@ def estimate_treatment_effect(qps = None, Y = None, Z = None, D = None, data = N
 
     return results
 
-def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_recs = None, data = None, Y_ind = None, Z_ind = None, recs_ind = None, cf_recs_ind = None, qps_ind = None,
+def estimate_counterfactual_ml(aps = None, Y = None, Z = None, ml_out = None, cf_ml_out = None, data = None, Y_ind = None,
+                               Z_ind = None, ml_out_ind = None, cf_ml_out_ind = None, aps_ind = None,
                                cov_type: str = "unadjusted", single_nondegen: bool = False, verbose: bool = True):
-    """Function to estimate counteractual performance of another algorithm
+    """Estimate counterfactual performance of a new algorithm
 
     Parameters
     -----------
-    qps: array-like, default: None
-        Array of estimated QPS values
+    aps: array-like, default: None
+        Array of estimated APS values
     Y: array-like, default: None
         Array of outcome variables
     Z: array-like, default: None
         Array of treatment recommendations
-    recs: array-like, default: None
+    ml_out: array-like, default: None
         Original ML function outputs
-    cf_recs: array-like, default: None
+    cf_ml_out: array-like, default: None
         Counterfactual ML function outputs
     data: array-like, default: None
         2D array of estimation inputs
@@ -139,12 +140,12 @@ def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_r
         Index of outcome variable in `data`
     Z_ind: int, default: None
         Index of treatment recommendation variable in `data`
-    recs_ind: int, default: None
+    ml_out_ind: int, default: None
         Index of original ML output variable in `data`
-    recs_ind: int, default: None
+    cf_ml_out_ind: int, default: None
         Index of counterfactual ML output variable in `data`
-    qps_ind: int, default: None
-        Index of QPS variable in `data`
+    aps_ind: int, default: None
+        Index of APS variable in `data`
     estimator: str, default: "2SLS"
         Method of IV estimation
     single_nondegen: bool, default: False
@@ -168,7 +169,7 @@ def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_r
 
     :math:`\\beta_1` is our estimated effect of treatment recommendation.
 
-    The we take the original ML output ``ML1`` and the counterfactual ML output ``ML2`` and estimate the below value equation.
+    Then we take the original ML output ``ML1`` and the counterfactual ML output ``ML2`` and estimate the below value equation.
 
     .. math::
 
@@ -178,13 +179,13 @@ def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_r
     if data is not None:
         data = np.array(data)
 
-    vals = {"Y": Y, "Z": Z, "QPS": qps , "recs": recs, "cf_recs": cf_recs}
+    vals = {"Y": Y, "Z": Z, "APS": aps , "ml_out": ml_out, "cf_ml_out": cf_ml_out}
 
     # If `data` given, then use index inputs for values not explicitly passed
     infer = []
     to_del = []
     if data is not None:
-        inds = {"Y": Y_ind, "Z": Z_ind, "QPS": qps_ind, "recs": recs_ind, "cf_recs": cf_recs_ind}
+        inds = {"Y": Y_ind, "Z": Z_ind, "APS": aps_ind, "ml_out": ml_out_ind, "cf_ml_out": cf_ml_out_ind}
         for key, val in vals.items():
             if val is None:
                 if inds[key] is not None:
@@ -200,24 +201,24 @@ def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_r
 
     Y = vals["Y"]
     Z = vals["Z"]
-    qps = vals["QPS"]
-    recs = np.array(vals["recs"])
-    cf_recs = np.array(vals["cf_recs"])
+    aps = vals["APS"]
+    ml_out = np.array(vals["ml_out"])
+    cf_ml_out = np.array(vals["cf_ml_out"])
 
-    if qps is None or Y is None or Z is None or recs is None or cf_recs is None:
-        raise ValueError("Treatment effect estimation requires all values qps, Y, Z, D and ML recommendations to be passed!")
+    if aps is None or Y is None or Z is None or ml_out is None or cf_ml_out is None:
+        raise ValueError("Treatment effect estimation requires all values aps, Y, Z, D and ML recommendations to be passed!")
 
-    lm_inp = pd.DataFrame({"Y": Y, "Z": Z, "qps": qps})
+    lm_inp = pd.DataFrame({"Y": Y, "Z": Z, "aps": aps})
     if not single_nondegen:
         lm_inp = add_constant(lm_inp)
 
-    ols_results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'Z', 'qps']], None, None).fit(cov_type='unadjusted')
+    ols_results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'Z', 'aps']], None, None).fit(cov_type='unadjusted')
 
     if verbose:
         print(ols_results)
 
     b_ols = ols_results.params['Z']
-    v = Y + b_ols * (cf_recs - recs)
+    v = Y + b_ols * (cf_ml_out - ml_out)
     v_score = np.mean(v)
 
     if verbose:
@@ -225,14 +226,14 @@ def estimate_counterfactual_ml(qps = None, Y = None, Z = None, recs = None, cf_r
 
     return (v, ols_results)
 
-def covariate_balance_test(qps = None, X = None, Z = None, data = None, X_ind = None, Z_ind = None, qps_ind = None,
+def covariate_balance_test(aps = None, X = None, Z = None, data = None, X_ind = None, Z_ind = None, aps_ind = None,
                            X_labels = None, cov_type = "robust", verbose: bool = True):
     """Covariate Balance Test
 
     Parameters
     -----------
-    qps: array-like, default: None
-        Array of estimated QPS values
+    aps: array-like, default: None
+        Array of estimated APS values
     X: array-like, default: None
         Array of covariates to test
     Z: array-like, default: None
@@ -243,8 +244,8 @@ def covariate_balance_test(qps = None, X = None, Z = None, data = None, X_ind = 
         Indices/indices of covariates in `data`
     Z_ind: int, default: None
         Index of treatment recommendation variable in `data`
-    qps_ind: int, default: None
-        Index of QPS variable in `data`
+    aps_ind: int, default: None
+        Index of APS variable in `data`
     X_labels: array-like, default: None
         Array of string labels to associate with each covariate
     cov_type: str, default: "robust"
@@ -259,18 +260,18 @@ def covariate_balance_test(qps = None, X = None, Z = None, data = None, X_ind = 
 
     Notes
     -----
-    This function esimates a system of Seemingly Unrelated Regression (SUR) as defined in the linearmodels package.
+    This function estimates a system of Seemingly Unrelated Regression (SUR) as defined in the linearmodels package.
 
-    QPS, X, Z, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
+    APS, X, Z, and data should never have any overlapping columns. This is not checkable through the code, so please double check this when passing in the inputs.
 
-    For QPS, X, Z, either the variables themselves should be passed, or their indices in `data`. If neither is passed then an error is raised.
+    For APS, X, Z, either the variables themselves should be passed, or their indices in `data`. If neither is passed then an error is raised.
 
     """
     # Error checking
     if X is None and (X_ind is None or data is None):
         raise ValueError("covariate_balance_test: No valid data passed for X. You must either pass the variable directly into `X` or its index along with a `data` object.")
-    if qps is None and (qps_ind is None or data is None):
-        raise ValueError("covariate_balance_test: No valid data passed for qps. You must either pass the variable directly into `X` or its index along with a `data` object.")
+    if aps is None and (aps_ind is None or data is None):
+        raise ValueError("covariate_balance_test: No valid data passed for aps. You must either pass the variable directly into `X` or its index along with a `data` object.")
     if Z is None and (Z is None or data is None):
         raise ValueError("covariate_balance_test: No valid data passed for Z. You must either pass the variable directly into `X` or its index along with a `data` object.")
     if X_labels is not None:
@@ -286,8 +287,8 @@ def covariate_balance_test(qps = None, X = None, Z = None, data = None, X_ind = 
         data = np.array(data)
         if X_ind is not None:
             X = data[:, X_ind]
-        if qps_ind is not None:
-            qps = data[:, qps_ind]
+        if aps_ind is not None:
+            aps = data[:, aps_ind]
         if Z_ind is not None:
             Z = data[:, Z_ind]
     if isinstance(X, np.ndarray):
@@ -300,13 +301,25 @@ def covariate_balance_test(qps = None, X = None, Z = None, data = None, X_ind = 
         X.columns = X_labels
     else:
         X_labels = X.columns
-    qps = np.array(qps)
+    aps = np.array(aps)
     Z = np.array(Z)
-    exog = np.column_stack((Z, qps))
-    exog = pd.DataFrame(exog, columns = ['Z', 'qps'])
-    exog = add_constant(exog)
+
+    # Use only observations where aps is nondegenerate
+    obs_tokeep = np.nonzero((aps > 0) & (aps < 1))
+    print(f"We will run balance testing on {len(obs_tokeep[0])} values out of {len(Z)} from the dataset for which the APS estimation is nondegenerate.")
+    assert len(obs_tokeep[0]) > 0
+    exog = np.column_stack((Z, aps))
+    exog = pd.DataFrame(exog, columns = ['Z', 'aps'])
+    exog = exog.iloc[obs_tokeep[0],:]
+    X = X[obs_tokeep[0]]
     if cov_type != "robust":
         cov_type = "unadjusted"
+
+    # Check for single non-degeneracy
+    single_nondegen = True
+    if len(np.unique(aps[obs_tokeep])) > 1:
+        single_nondegen = False
+        exog = add_constant(exog)
 
     # Covariate balance test
     mv_ols_res = SUR.multivariate_ls(X, exog).fit(cov_type = cov_type)
@@ -331,6 +344,8 @@ def covariate_balance_test(qps = None, X = None, Z = None, data = None, X_ind = 
         res_dict[x_var]['coef'] = mv_ols_res.params[f"{x_var}_Z"]
         res_dict[x_var]['p'] = mv_ols_res.pvalues[f"{x_var}_Z"]
         res_dict[x_var]['t'] = mv_ols_res.tstats[f"{x_var}_Z"]
+        res_dict[x_var]['n'] = mv_ols_res.nobs
+        res_dict[x_var]['stderr'] = mv_ols_res.std_errors[f"{x_var}_Z"]
     if mv_test_res is None:
         res_dict['joint'] = {}
         res_dict['joint']['p'] = mv_ols_res.pvalues[f"{X_labels[0]}_Z"]

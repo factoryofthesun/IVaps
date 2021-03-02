@@ -13,11 +13,11 @@ Please refer to the section :doc:`method` for a formal introduction to the causa
 MLisNE Pipeline
 ----------------
 
-The mlisne package is an implementation of the treatment effect estimation method described above. This package provides functions for QPS estimation and treatment effect estimation that is ML framework-agnostic.
+The IVaps package is an implementation of the treatment effect estimation method described above. This package provides functions for APS estimation and treatment effect estimation that is ML framework-agnostic.
 
 The package serves the two key steps for causal effect estimation in this framework:
 
-- **QPS estimation**: This package provides functions for efficient QPS estimation with both ONNX and custom user function support.
+- **APS estimation**: This package provides functions for efficient APS estimation with both ONNX and custom user function support.
 - **IV estimation**: This package provides functions for IV estimation and counterfactual value estimation wrappers that use estimators from the `linearmodels package <https://bashtage.github.io/linearmodels/>`_.
 
 In addition, the helpers module provides additional tools for ONNX assistance, such as a framework agnostic ONNX conversion function and a function for executing ONNX runtime sessions.

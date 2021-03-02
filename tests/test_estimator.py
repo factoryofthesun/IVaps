@@ -12,8 +12,8 @@ from pathlib import Path
 from linearmodels.iv import IV2SLS
 import statsmodels.api as sm
 
-from mlisne import estimate_qps_onnx, estimate_qps_user_defined
-from mlisne import estimate_treatment_effect, estimate_counterfactual_ml, covariate_balance_test
+from IVaps import estimate_aps_onnx, estimate_aps_user_defined
+from IVaps import estimate_treatment_effect, estimate_counterfactual_ml, covariate_balance_test
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")
@@ -31,8 +31,8 @@ def test_inp_error(iris_data):
         model = estimate_treatment_effect(Y = iris_data['Y'], Z = iris_data['Z'], D = iris_data['D'])
 
 def test_iris_estimation(iris_data):
-    qps = estimate_qps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
-    model = estimate_treatment_effect(qps, Y = iris_data['Y'], Z = iris_data['Z'], D = iris_data['D'])
+    aps = estimate_aps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
+    model = estimate_treatment_effect(aps, Y = iris_data['Y'], Z = iris_data['Z'], D = iris_data['D'])
 
     # Test second stage values
     ci = model.conf_int()
@@ -45,8 +45,8 @@ def test_iris_estimation(iris_data):
     resids = model.resids
     n = model.nobs
 
-    obs_tokeep = np.nonzero((qps > 0) & (qps < 1))
-    exog = sm.add_constant(qps[obs_tokeep])
+    obs_tokeep = np.nonzero((aps > 0) & (aps < 1))
+    exog = sm.add_constant(aps[obs_tokeep])
 
     iv_check = IV2SLS(iris_data.loc[obs_tokeep[0], 'Y'], exog, iris_data.loc[obs_tokeep[0], 'D'], iris_data.loc[obs_tokeep[0], 'Z']).fit(cov_type='robust')
     validation_ci = iv_check.conf_int()
@@ -103,9 +103,9 @@ def test_iris_estimation(iris_data):
     assert np.allclose(r2, validation_r2)
 
 def test_iris_estimation_infer_positions(iris_data):
-    qps = estimate_qps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
-    iris_data['qps'] = qps
-    model0 = estimate_treatment_effect(data = iris_data[['Y', 'Z', 'D', 'qps']])
+    aps = estimate_aps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
+    iris_data['aps'] = aps
+    model0 = estimate_treatment_effect(data = iris_data[['Y', 'Z', 'D', 'aps']])
 
     # Test second stage values
     ci0 = model0.conf_int()
@@ -118,7 +118,7 @@ def test_iris_estimation_infer_positions(iris_data):
     resids0 = model0.resids
     n0 = model0.nobs
 
-    model1 = estimate_treatment_effect(data = iris_data[['Z', 'Y', 'D', 'qps']], Z_ind = 0)
+    model1 = estimate_treatment_effect(data = iris_data[['Z', 'Y', 'D', 'aps']], Z_ind = 0)
 
     ci1 = model1.conf_int()
     stderr1 = model1.std_errors
@@ -138,7 +138,7 @@ def test_iris_estimation_infer_positions(iris_data):
     assert np.allclose(t0.to_numpy().flatten(), t1.to_numpy().flatten())
     assert np.allclose(r20, r21)
 
-    model2 = estimate_treatment_effect(data = iris_data[['Y', 'Z', 'D', 'qps']], qps = iris_data['qps'], Y_ind = 0, D_ind = 2)
+    model2 = estimate_treatment_effect(data = iris_data[['Y', 'Z', 'D', 'aps']], aps = iris_data['aps'], Y_ind = 0, D_ind = 2)
 
     ci2 = model2.conf_int()
     stderr2 = model2.std_errors
@@ -158,7 +158,7 @@ def test_iris_estimation_infer_positions(iris_data):
     assert np.allclose(t1.to_numpy().flatten(), t2.to_numpy().flatten())
     assert np.allclose(r21, r22)
 
-    model3 = estimate_treatment_effect(data = iris_data[['Y', 'Z', 'D', 'qps']], qps = iris_data['qps'], Y_ind = 0, D_ind = 2, Z_ind = 1)
+    model3 = estimate_treatment_effect(data = iris_data[['Y', 'Z', 'D', 'aps']], aps = iris_data['aps'], Y_ind = 0, D_ind = 2, Z_ind = 1)
 
     ci3 = model3.conf_int()
     stderr3 = model3.std_errors
@@ -179,7 +179,7 @@ def test_iris_estimation_infer_positions(iris_data):
     assert np.allclose(r22, r33)
 
 def test_counterfactual_estimation(iris_data):
-    qps = estimate_qps_onnx(f"{sklearn_logreg}", data = iris_data[["X1", "X2", "X3", "X4"]], types=(np.float32,None))
+    aps = estimate_aps_onnx(f"{sklearn_logreg}", data = iris_data[["X1", "X2", "X3", "X4"]], types=(np.float32,None))
 
     og_sess = rt.InferenceSession(sklearn_logreg)
     og_input = og_sess.get_inputs()[0].name
@@ -191,7 +191,7 @@ def test_counterfactual_estimation(iris_data):
     new_preds = new_sess.run(['output_probability'], {new_input: iris_data[["X1", "X2", "X3", "X4"]].to_numpy().astype(np.float32)})[0]
     new_out = np.array([d[1] for d in new_preds])
 
-    cf_values, ols_results = estimate_counterfactual_ml(Y = iris_data.Y, Z = iris_data.Z, qps = qps, recs = og_out, cf_recs = new_out)
+    cf_values, ols_results = estimate_counterfactual_ml(Y = iris_data.Y, Z = iris_data.Z, aps = aps, ml_out = og_out, cf_ml_out = new_out)
 
     # Check fitted OLS parameters
     ci = ols_results.conf_int()
@@ -204,8 +204,8 @@ def test_counterfactual_estimation(iris_data):
     resids = ols_results.resids
     n = ols_results.nobs
 
-    iris_data['qps'] = qps
-    exog = sm.add_constant(iris_data[['Z', 'qps']])
+    iris_data['aps'] = aps
+    exog = sm.add_constant(iris_data[['Z', 'aps']])
     check_ols = IV2SLS(iris_data.Y, exog, None, None).fit(cov_type='unadjusted')
 
     ci_check = check_ols.conf_int()
@@ -230,8 +230,8 @@ def test_counterfactual_estimation(iris_data):
     assert np.allclose(cf_values, check_cf_values)
 
 def test_counterfactual_infer_positions(iris_data):
-    qps = estimate_qps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
-    iris_data['qps'] = qps
+    aps = estimate_aps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
+    iris_data['aps'] = aps
 
     og_sess = rt.InferenceSession(sklearn_logreg)
     og_input = og_sess.get_inputs()[0].name
@@ -245,7 +245,7 @@ def test_counterfactual_infer_positions(iris_data):
 
     iris_data['recs'] = og_out
     iris_data['cf_recs'] = new_out
-    cf_values0, model0 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'qps', 'recs', 'cf_recs']])
+    cf_values0, model0 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'aps', 'recs', 'cf_recs']])
 
     # OLS values
     ci0 = model0.conf_int()
@@ -258,7 +258,7 @@ def test_counterfactual_infer_positions(iris_data):
     resids0 = model0.resids
     n0 = model0.nobs
 
-    cf_values1, model1 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'qps', 'recs', 'cf_recs']], Z_ind = 1)
+    cf_values1, model1 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'aps', 'recs', 'cf_recs']], Z_ind = 1)
 
     ci1 = model1.conf_int()
     stderr1 = model1.std_errors
@@ -279,7 +279,7 @@ def test_counterfactual_infer_positions(iris_data):
     assert np.allclose(r20, r21)
     assert np.allclose(cf_values0, cf_values1)
 
-    cf_values2, model2 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'qps', 'recs', 'cf_recs']], cf_recs = iris_data['cf_recs'], Y_ind = 0, qps_ind = 2)
+    cf_values2, model2 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'aps', 'recs', 'cf_recs']], cf_ml_out = iris_data['cf_recs'], Y_ind = 0, aps_ind = 2)
 
     ci2 = model2.conf_int()
     stderr2 = model2.std_errors
@@ -300,7 +300,7 @@ def test_counterfactual_infer_positions(iris_data):
     assert np.allclose(r21, r22)
     assert np.allclose(cf_values1, cf_values2)
 
-    cf_values3, model3 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'qps', 'recs', 'cf_recs']], qps = iris_data['qps'], Y_ind = 0, qps_ind = 2, Z_ind = 1, recs = iris_data['recs'], cf_recs_ind = 4)
+    cf_values3, model3 = estimate_counterfactual_ml(data = iris_data[['Y', 'Z', 'aps', 'recs', 'cf_recs']], aps = iris_data['aps'], Y_ind = 0, aps_ind = 2, Z_ind = 1, ml_out = iris_data['recs'], cf_ml_out_ind = 4)
 
     ci3 = model3.conf_int()
     stderr3 = model3.std_errors
@@ -322,18 +322,18 @@ def test_counterfactual_infer_positions(iris_data):
     assert np.allclose(cf_values2, cf_values3)
 
 def test_covariate_balance(iris_data):
-    qps = estimate_qps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
-    iris_data['qps'] = qps
+    aps = estimate_aps_onnx(f"{model_path}/iris_logreg.onnx", data = iris_data[["X1", "X2", "X3", "X4"]])
+    iris_data['aps'] = aps
 
-    res = covariate_balance_test(qps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'])
-    res2 = covariate_balance_test(qps, iris_data[["X1"]], iris_data['Z'])
-    res3 = covariate_balance_test(qps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'], cov_type = "aldsfla",
+    res = covariate_balance_test(aps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'])
+    res2 = covariate_balance_test(aps, iris_data[["X1"]], iris_data['Z'])
+    res3 = covariate_balance_test(aps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'], cov_type = "aldsfla",
                                 X_labels = ["var1", "var2", "var3", "var4"], verbose=False)
     with pytest.raises(ValueError):
-        res3 = covariate_balance_test(qps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'], cov_type = "aldsfla",
+        res3 = covariate_balance_test(aps, iris_data[["X1", "X2", "X3", "X4"]], iris_data['Z'], cov_type = "aldsfla",
                                     X_labels = ["var1", "var2", "var3", "var4", "var5"], verbose=False)
     with pytest.raises(ValueError):
-        res3 = covariate_balance_test(qps, data = iris_data[["X1", "X2", "X3", "X4"]], Z = iris_data['Z'])
+        res3 = covariate_balance_test(aps, data = iris_data[["X1", "X2", "X3", "X4"]], Z = iris_data['Z'])
 
     assert all([k in ['joint', 'X1', 'X2', 'X3', 'X4'] for k in res[1].keys()])
     assert all([k in ['joint', 'X1'] for k in res2[1].keys()])

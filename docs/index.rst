@@ -1,20 +1,20 @@
-.. mlisne documentation master file, created by
+.. IVaps documentation master file, created by
    sphinx-quickstart on Wed Aug 26 15:16:03 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-MLISNE: Machine Learning is Natural Experiment Documentation
+IVAPS: Algorithm is Experiment Documentation
 ============================================================
 
 Overview
 ~~~~~~~~
 
-The mlisne package is a generic implementation of the treatment effect estimation method proposed in :cite:`Narita2020`. The package provides functions for QPS estimation and treatment effect estimation, and is designed to be flexible to the researcher's specific treatment interface.
+The IVaps package is a generic implementation of the treatment effect estimation method proposed in :cite:`Narita2021`. The package provides functions for APS estimation and treatment effect estimation, and is designed to be flexible to the researcher's specific treatment interface.
 
 Supported ML Frameworks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The ML-agnostic QPS estimation function ``estimate_qps_onnx`` only accepts models in the ONNX framework in order to maintain the generalized implementation. The module provides an ONNX conversion function ``convert_to_onnx`` that currently supports conversion from the following frameworks:
+The ML-agnostic APS estimation function ``estimate_aps_onnx`` only accepts models in the ONNX framework in order to maintain the generalized implementation. The module provides an ONNX conversion function ``convert_to_onnx`` that currently supports conversion from the following frameworks:
 
 - `Sklearn <https://github.com/onnx/sklearn-onnx/>`_
 - `Pytorch <https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html>`_
@@ -33,7 +33,7 @@ Please note that use of these functions requires that the relevant framework pac
 License
 ~~~~~~~
 
-This project is licensed under the Apache 2.0 License - see the `LICENSE <https://github.com/factoryofthesun/mlisne/blob/master/LICENSE>`_ file for details.
+This project is licensed under the Apache 2.0 License - see the `LICENSE <https://github.com/factoryofthesun/IVaps/blob/master/LICENSE>`_ file for details.
 
 .. toctree::
    :maxdepth: 2
@@ -54,14 +54,14 @@ This project is licensed under the Apache 2.0 License - see the `LICENSE <https:
    :maxdepth: 2
    :caption: API Reference:
 
-   mlisne
+   IVaps
 
 .. toctree::
    :maxdepth: 2
    :caption: Others:
 
    references
-   Github <https://github.com/factoryofthesun/mlisne>
+   Github <https://github.com/factoryofthesun/IVaps>
 
 Indices and tables
 ==================

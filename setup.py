@@ -3,7 +3,7 @@ from os import path, getcwd
 import sys
 
 here = path.abspath(path.dirname(__file__))
-sys.path.insert(0, path.join(here, "mlisne"))
+sys.path.insert(0, path.join(here, "IVaps"))
 
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
@@ -30,10 +30,10 @@ except:
 install_requires.append(onnx)
 
 setup(
-    name="mlisne",
+    name="IVaps",
     version="0.1.0",
     description="Machine Learning is Natural Experiment",
-    url="https://github.com/factoryofthesun/mlisne",
+    url="https://github.com/factoryofthesun/IVaps",
     author="Richard Liu",
     author_email="guanzhi97@gmail.com",
     keywords=["treatment effect estimation", "causal machine learning"],

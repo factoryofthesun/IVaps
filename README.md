@@ -1,17 +1,17 @@
 # Machine Learning is Natural Experiment
-**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://mlisne.readthedocs.io/en/latest/)**
+**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://IVaps.readthedocs.io/en/latest/)**
 <details>
 <summary><strong>Table of Contents</strong></summary>
 
 - [Overview](#overview)
   - [ML as a Data Production Service](#ml-as-a-data-production)
   - [Framework](#framework)
-  - [MLisNE Package](#mlisne-package)
+  - [IVaps Package](#ivaps-package)
     - [Supported ML Frameworks](#supported-ml-frameworks)
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Usage](#usage)
-  - [QPS Estimation](#qps-estimation)
+  - [APS Estimation](#aps-estimation)
   - [IV Estimation](#iv-estimation)
   - [Counterfactual Estimation](#counterfactual-estimation)
   - [Model Conversion](#model-conversion)
@@ -31,15 +31,15 @@
 ## ML as a Data Production Service
 Today’s society increasingly resorts to machine learning (“AI”) and other algorithms for decision-making and resource allocation. For example, judges make legal judgements using predictions from supervised machine learning (descriptive regression). Supervised learning is also used by governments to detect potential criminals and terrorists, and financial companies (such as banks and insurance companies) to screen potential customers. Tech companies like Facebook, Microsoft, and Netflix allocate digital content by reinforcement learning and bandit algorithms. Uber and other ride sharing services adjust prices using their surge pricing algorithms to take into account local demand and supply information. Retailers and e-commerce platforms like Amazon engage in algorithmic pricing. Similar algorithms are invading into more and more high-stakes treatment assignment, such as education, health, and military.
 
-All of the above, seemingly diverse examples share a common trait: An algorithm makes decisions based only on observable input variables the data-generating algorithm uses. Conditional on the observable variables, therefore, algorithmic treatment decisions are (quasi-)randomly assigned. This property makes algorithm-based treatment decisions **an instrumental variable we can use for measuring the causal effect of the final treatment assignment**. The algorithm-based instrument may produce regression-discontinuity-style local variation (e.g. machine judges), stratified randomization (e.g. several bandit and reinforcement leaning algorithms), or mixes of the two. Narita 2020 introduces the formal framework and characterizes the sources of causal effect identification.[[1]](#1)
+All of the above, seemingly diverse examples share a common trait: An algorithm makes decisions based only on observable input variables the data-generating algorithm uses. Conditional on the observable variables, therefore, algorithmic treatment decisions are (quasi-)randomly assigned. This property makes algorithm-based treatment decisions **an instrumental variable we can use for measuring the causal effect of the final treatment assignment**. The algorithm-based instrument may produce regression-discontinuity-style local variation (e.g. machine judges), stratified randomization (e.g. several bandit and reinforcement leaning algorithms), or mixes of the two. Narita 2021 introduces the formal framework and characterizes the sources of causal effect identification.[[1]](#1)
 
 ## Framework
-On a high level, the MLisNE method works by exploiting the fact that all inputs into a machine learning model are observable to the researcher, and thus controlling for these inputs allows one to make use of the feature space in which machine learning algorithms are effectively stochastic -- there is random assignment between two (or more) possible discrete outputs. For algorithm-based treatment decisions, we know that the algorithm output strongly affects the ultimate treatment decision (either because the algorithm *is* the treatment decision, or a final arbiter relies on the algorithm output to make the final assignment). Thus in theory, we should be able to use the output predictions of algorithms which mediate any treatment decision regime to estimate the causal effects of the treatments. 
+On a high level, the Approximate Propensity Score method works by exploiting the fact that all inputs into a machine learning model are observable to the researcher, and thus controlling for these inputs allows one to make use of the feature space in which machine learning algorithms are effectively stochastic -- there is random assignment between two (or more) possible discrete outputs. For algorithm-based treatment decisions, we know that the algorithm output strongly affects the ultimate treatment decision (either because the algorithm *is* the treatment decision, or a final arbiter relies on the algorithm output to make the final assignment). Thus in theory, we should be able to use the output predictions of algorithms which mediate any treatment decision regime to estimate the causal effects of the treatments.
 <p align="center" width = "100%">
   <img src="/images/ml_natural_experiment_diagram.PNG" width="50%" height="50%"/>
 </p>
 
-Below is the basic setup to the framework. 
+Below is the basic setup to the framework.
 <p align="center" width = "100%">
   <img src="/images/framework_1.PNG" width="50%" height="50%"/>
 </p>
@@ -49,24 +49,24 @@ Below are the assumptions on the characteristics of the algorithm for this metho
   <img src="/images/framework_2.PNG" width="50%" height="50%"/>
 </p>
 
-The Quasi-Propensity Score (QPS) is an object that captures all the experimental information for an algorithm. The 2nd image below illustrates an example of this for an algorithm that takes 2-D inputs and produces output predictions between 0 and 1. As highlighted, QPS helps to identify the sources of causal effects generated by the algorithm -- the subsets of the support space for which the algorithm's recommendation is non-deterministic. 
+The Approximate Propensity Score (APS) is an object that captures all the experimental information for an algorithm. The 2nd image below illustrates an example of this for an algorithm that takes 2-D inputs and produces output predictions between 0 and 1. As highlighted, APS helps to identify the sources of causal effects generated by the algorithm -- the subsets of the support space for which the algorithm's recommendation is non-deterministic.
 <p align="center" width = "100%">
   <img src="/images/framework_3.PNG" width="50%" height="50%"/>
-  <img src="/images/qps_chart.PNG" width="50%" height="50%"/>
+  <img src="/images/aps_chart.PNG" width="50%" height="50%"/>
 </p>
 
-Narita 20 proposes an instrumental variables approach to causal effect estimation. In particular, a 2SLS regression framework instrumenting treatment assignment with the algorithmic recommendation, controlling for estimated QPS. 
+Narita 20 proposes an instrumental variables approach to causal effect estimation. In particular, a 2SLS regression framework instrumenting treatment assignment with the algorithmic recommendation, controlling for estimated APS.
 <p align="center" width = "100%">
   <img src="/images/framework_2sls.png" width="40%" height="40%"/>
 </p>
 
-For more detail on the theoretical framework, please refer to the paper "Machine Learning is Natural Experiment" (Narita and Yata, forthcoming) or the [method page](https://mlisne.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
+For more detail on the theoretical framework, please refer to the paper "Machine Learning is Natural Experiment" (Narita and Yata, forthcoming) or the [method page](https://IVaps.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
 
-## MLisNE Package
-The mlisne package is an implementation of the treatment effect estimation method and paper described above. This package provides functions for the two primary estimation steps -- QPS estimation and treatment effect estimation -- and is ML framework-agnostic.
+## IVaps Package
+The IVaps package is an implementation of the treatment effect estimation method and paper described above. This package provides functions for the two primary estimation steps -- APS estimation and treatment effect estimation -- and is ML framework-agnostic.
 
 ### Supported ML Frameworks
-The QPS estimation function for trained models `estimate_qps_onnx` only accepts models in the ONNX framework in order to maintain the framework-agnostic implementation. The module provides a `convert_to_onnx` function that currently supports conversion from the following frameworks:
+The APS estimation function for trained models `estimate_aps_onnx` only accepts models in the ONNX framework in order to maintain the framework-agnostic implementation. The module provides a `convert_to_onnx` function that currently supports conversion from the following frameworks:
 
 - [Sklearn](https://github.com/onnx/sklearn-onnx/)
 - [Pytorch](https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html)
@@ -85,14 +85,14 @@ Please note that `convert_to_onnx` requires that the relevant framework packages
 # Installation
 This package is still in its development phase, but you can compile the package from source
 ```bash
-git clone https://github.com/factoryofthesun/mlisne
-cd mlisne
+git clone https://github.com/factoryofthesun/IVaps
+cd IVaps
 pip install .
 ```
 To install in development mode
 ```bash
-git clone https://github.com/factoryofthesun/mlisne
-cd mlisne
+git clone https://github.com/factoryofthesun/IVaps
+cd IVaps
 pip install -e ./
 ```
 The installation will automatically detect whether there is a compatible GPU device on the system and install either onnxruntime or onnxruntime-gpu. Please note that the default onnxruntime GPU build requires CUDA runtime libraries being installed on the system. Please see the [onnxruntime repository](https://github.com/microsoft/onnxruntime) for more details regarding the GPU build.
@@ -106,17 +106,17 @@ Below is a general example of how to use the modules in this package to estimate
 import pandas as pd
 import numpy as np
 import onnxruntime as rt
-from mlisne import estimate_qps_onnx
-from mlisne import estimate_treatment_effect
+from IVaps import estimate_aps_onnx
+from IVaps import estimate_treatment_effect
 
 # Read in data
 data = pd.read_csv("path_to_your_historical_data.csv")
 
-# Estimate QPS with 100 draws and ball radius 0.8
-qps = estimate_qps_onnx(X_c = data[["names", "of", "continuous", "variables"]], X_d = data[["names", "of", "discrete", "variables"]], S=100, delta=0.8, ML_onnx="path_to_onnx_model.onnx")
+# Estimate APS with 100 draws and ball radius 0.8
+aps = estimate_aps_onnx(X_c = data[["names", "of", "continuous", "variables"]], X_d = data[["names", "of", "discrete", "variables"]], S=100, delta=0.8, ML_onnx="path_to_onnx_model.onnx")
 
 # Fit 2SLS Estimation model
-model = estimate_treatment_effect(Y = data["outcome"], Z = data["treatment_recommendation"], D = data["treatment_assignment"], qps = qps)
+model = estimate_treatment_effect(Y = data["outcome"], Z = data["treatment_recommendation"], D = data["treatment_assignment"], aps = aps)
 
 # Prints estimation results
 print(model) # Print summary of second stage results
@@ -126,17 +126,17 @@ print(model.first_stage.individual['D']) # Another view of first stage results
 model.params # Array of second-stage estimated coefficients
 model.cov # Variance covariance matrix
 ```
-In general the MLisNE method has two main estimation steps: QPS estimation and IV estimation.
+In general the IVaps method has two main estimation steps: APS estimation and IV estimation.
 
-## QPS Estimation
-The main QPS estimation functions are `estimate_qps_onnx`, and `estimate_qps_user_defined`, each serving different algorithmic use-cases. `estimate_qps_onnx` serves the case when an ONNX model with an optional post-prediction decision function produces the treatment recommendation. `estimate_qps_user_defined` serves the case when the user has a custom function that takes an array of ML inputs and outputs treatment recommendations. QPS estimation requires at minimum that we have `X_c` a collection of continuous variable data, `S` the number of draws per estimate, and `delta` the radius of the ball. As will be demonstrated below, however, there are a number of different ways that users can pass in data for estimation. Please refer to the documentation for the full list of keyword parameters and their default values.
+## APS Estimation
+The main APS estimation functions are `estimate_aps_onnx`, and `estimate_aps_user_defined`, each serving different algorithmic use-cases. `estimate_aps_onnx` serves the case when an ONNX model with an optional post-prediction decision function produces the treatment recommendation. `estimate_aps_user_defined` serves the case when the user has a custom function that takes an array of ML inputs and outputs treatment recommendations. APS estimation requires at minimum that we have `X_c` a collection of continuous variable data, `S` the number of draws per estimate, and `delta` the radius of the ball. As will be demonstrated below, however, there are a number of different ways that users can pass in data for estimation. Please refer to the documentation for the full list of keyword parameters and their default values.
 
 **Note:** `data`, `X_c`, and `X_d` should never have any overlapping columns. This is impossible to check in the code, so best practice is to use either `data` and index inputs `C` and `D` or `X_c` and `X_d` separately.
 
 ```python
 import pandas as pd
 import numpy as np
-from mlisne import estimate_qps_onnx
+from IVaps import estimate_aps_onnx
 
 S = 100
 delta = 0.8
@@ -145,39 +145,39 @@ ml_path = "path_to_your_onnx_model.onnx"
 data = pd.read_csv("path_to_your_historical_data.csv")
 
 ### The below function calls will all output the same results
-qps0 = estimate_qps_onnx(ml_path, X_c = data[['continuous', 'variables']], X_d = data[['discrete', 'variables']], S = 100, delta = 0.8, seed = seed)
-qps1 = estimate_qps_onnx(ml_path, data = data, C = indices_of_cts_vars, D = indices_of_discrete_vars, S = 100, delta = 0.8, seed = seed)
+aps0 = estimate_aps_onnx(ml_path, X_c = data[['continuous', 'variables']], X_d = data[['discrete', 'variables']], S = 100, delta = 0.8, seed = seed)
+aps1 = estimate_aps_onnx(ml_path, data = data, C = indices_of_cts_vars, D = indices_of_discrete_vars, S = 100, delta = 0.8, seed = seed)
 
 # The function infers data greedily, so that whatever variables are not explicitly passed will be inferred from the remaining data
-qps2 = estimate_qps_onnx(ml_path, data = data[['continuous', 'vars']], X_d = data[['discrete', 'vars']], S = 100, delta = 0.8, seed = seed) # Assumes all of `data` is continuous
-qps3 = estimate_qps_onnx(ml_path, data = data[['discrete', 'vars']], X_c = data[['continuous', 'vars']], S = 100, delta = 0.8, seed = seed) # Assumes all of `data` is discrete
-qps4 = estimate_qps_onnx(ml_path, data = data[['cts', 'and', 'discrete', 'vars']], C = indices_of_cts_vars, S = 100, delta = 0.8, seed = seed) # Assumes remaining columns of `data` are discrete
-qps5 = estimate_qps_onnx(ml_path, data = data[['cts', 'and', 'discrete', 'vars']], D = indices_of_discrete_vars, S = 100, delta = 0.8, seed = seed) # Assumes remaining columns of `data` are continuous
+aps2 = estimate_aps_onnx(ml_path, data = data[['continuous', 'vars']], X_d = data[['discrete', 'vars']], S = 100, delta = 0.8, seed = seed) # Assumes all of `data` is continuous
+aps3 = estimate_aps_onnx(ml_path, data = data[['discrete', 'vars']], X_c = data[['continuous', 'vars']], S = 100, delta = 0.8, seed = seed) # Assumes all of `data` is discrete
+aps4 = estimate_aps_onnx(ml_path, data = data[['cts', 'and', 'discrete', 'vars']], C = indices_of_cts_vars, S = 100, delta = 0.8, seed = seed) # Assumes remaining columns of `data` are discrete
+aps5 = estimate_aps_onnx(ml_path, data = data[['cts', 'and', 'discrete', 'vars']], D = indices_of_discrete_vars, S = 100, delta = 0.8, seed = seed) # Assumes remaining columns of `data` are continuous
 
-assert qps0 == qps1 == qps2 == qps3 == qps4 == qps5
+assert aps0 == aps1 == aps2 == aps3 == aps4 == aps5
 
 # If only the data object is passed, then all variables will be assumed to be continuous
-qps = estimate_qps_onnx(ml_path, data = data[['all', 'continuous', 'variables']], S = 100, delta = 0.8,)
+aps = estimate_aps_onnx(ml_path, data = data[['all', 'continuous', 'variables']], S = 100, delta = 0.8,)
 
 # We can specify np types for coercion if the ONNX model expects different types
-qps = estimate_qps_onnx(ml_path, data = data, S = 100, delta = 0.8, types=(np.float64,))
+aps = estimate_aps_onnx(ml_path, data = data, S = 100, delta = 0.8, types=(np.float64,))
 
 # If the ONNX model takes separate continuous and discrete inputs, then we need to specify the input type and input names
-qps = estimate_qps_onnx(ml_path, data = data, S = 100, delta = 0.8, input_type=2, input_names=("c_inputs", "d_inputs"))
+aps = estimate_aps_onnx(ml_path, data = data, S = 100, delta = 0.8, input_type=2, input_names=("c_inputs", "d_inputs"))
 
-### QPS estimation with passing ML outputs into a decision function
+### APS estimation with passing ML outputs into a decision function
 
-# We can pass the base function `round` directly into the qps estimation, which will vectorize the function for us and round the ML outputs
-qps = estimate_qps_onnx(ml_path, data = data, S = 100, delta = 0.8, fcn = round)
+# We can pass the base function `round` directly into the aps estimation, which will vectorize the function for us and round the ML outputs
+aps = estimate_aps_onnx(ml_path, data = data, S = 100, delta = 0.8, fcn = round)
 
 # Additional keyword argument will be passed directly into the decision function
-qps = estimate_qps_onnx(ml_path, data = data, S = 100, delta = 0.8, fcn = round, digits=5)
+aps = estimate_aps_onnx(ml_path, data = data, S = 100, delta = 0.8, fcn = round, digits=5)
 
 # We can also pass a vectorized function with the flag `vectorized`
-qps = estimate_qps_onnx(ml_path, data = data, S = 100, delta = 0.8, fcn = np.round, vectorized=True)
+aps = estimate_aps_onnx(ml_path, data = data, S = 100, delta = 0.8, fcn = np.round, vectorized=True)
 
-### QPS estimation with a user-defined function
-from mlisne import estimate_qps_user_defined
+### APS estimation with a user-defined function
+from IVaps import estimate_aps_user_defined
 
 model = pickle.load(open("path_to_your_model.pickle", 'rb'))
 
@@ -191,19 +191,19 @@ def ml_round(X, **kwargs):
     treat = assign_cutoff(preds, **kwargs)
     return treat
 
-qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5)
+aps = estimate_aps_user_defined(data = data, ml = ml_round, c = 0.5)
 
-# We can parallelize QPS computation with a user defined function -- see documentation for more details
-qps = estimate_qps_user_defined(data = data, ml = ml_round, c = 0.5, parallel = True)
+# We can parallelize APS computation with a user defined function -- see documentation for more details
+aps = estimate_aps_user_defined(data = data, ml = ml_round, c = 0.5, parallel = True)
 ```
 
 ### Mixed Variables and Missing Values Treatment
-QPS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary `L`, where the keys are the indices of `X_c` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
+APS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary `L`, where the keys are the indices of `X_c` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
 
 ```python
 import pandas as pd
 import numpy as np
-from mlisne import estimate_qps_onnx
+from IVaps import estimate_aps_onnx
 
 data_with_missing = pd.read_csv("path_to_your_historical_data_with_missing.csv")
 ml_path = "path_to_your_onnx_model.onnx"
@@ -211,39 +211,39 @@ ml_path = "path_to_your_onnx_model.onnx"
 # Create mixed variables dictionary
 L = {0: {0}, 3: {5, 10}} # This indicates that the 0th and 3rd index continuous variables are mixed variables with the passed discrete parts
 
-# QPS estimation
-qps = estimate_qps_onnx(ml_path, data = data_with_missing, L = L)
+# APS estimation
+aps = estimate_aps_onnx(ml_path, data = data_with_missing, L = L)
 ```
 
 ### Pandas Compatibility
-Sometimes the custom user function may require a pandas dataframe as an input and be column-order or column-name sensitive. Below are examples of how to pass these options into QPS estimation.
+Sometimes the custom user function may require a pandas dataframe as an input and be column-order or column-name sensitive. Below are examples of how to pass these options into APS estimation.
 ```python
 import pandas as import pd
-from mlisne import estimate_qps_user_defined
+from IVaps import estimate_aps_user_defined
 
 data = pd.read_csv("path_to_your_historical_data.csv")
 
 # If the custom function expects pandas data, we need to set the `pandas` flag and optionally assign column names
-qps = estimate_qps_user_defined(data = data, ml = pandas_dependent_function, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'])
+aps = estimate_aps_user_defined(data = data, ml = pandas_dependent_function, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'])
 
 # We can also have the inputs maintain the original order that we passed them in
-qps = estimate_qps_user_defined(data = data, ml = function_that_needs_original_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True)
+aps = estimate_aps_user_defined(data = data, ml = function_that_needs_original_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True)
 
 # We can also do a custom reordering of the columns -- the arguments `keep_order`, `reorder`, and `pandas_cols` are applied sequentially in that order
 # The below example will apply the ordering using the indices passed into `reorder` onto the original column order
-qps = estimate_qps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True, reorder = new_ordering)
+aps = estimate_aps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], keep_order = True, reorder = new_ordering)
 
 # The below example will apply the reordering on the default input order, which is [continuous_variables, discrete_variables]
-qps = estimate_qps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], reorder = new_ordering)
+aps = estimate_aps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], reorder = new_ordering)
 ```
 
 ### Mixed Variables and Missing Values Treatment
-QPS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary ``L``, where the keys are the indices of ``X_c`` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
+APS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary ``L``, where the keys are the indices of ``X_c`` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
 
 ```python
 import pandas as pd
 import numpy as np
-from mlisne import estimate_qps_onnx
+from IVaps import estimate_aps_onnx
 
 data_with_missing = pd.read_csv("path_to_your_historical_data_with_missing.csv")
 ml_path = "path_to_your_onnx_model.onnx"
@@ -251,25 +251,25 @@ ml_path = "path_to_your_onnx_model.onnx"
 # Create mixed variables dictionary
 L = {0: {0}, 3: {5, 10}} # This indicates that the 0th and 3rd index continuous variables are mixed variables with the passed discrete parts
 
-# QPS estimation
-qps = estimate_qps_onnx(ml_path, data = data_with_missing, L = L)
+# APS estimation
+aps = estimate_aps_onnx(ml_path, data = data_with_missing, L = L)
 ```
 
 ## IV Estimation
-Once the QPS is estimated for each observation, the IV approach allows us to estimate the historical LATE. `estimate_treatment_effect` is our primary IV estimation function, and makes use of the IV2SLS class from the [linearmodels package](https://bashtage.github.io/linearmodels/). As per the package, the function will return an IVResults object. Post-estimation diagnostics and statistics are accessible directly from this object. Please refer to the [object documentation](https://bashtage.github.io/linearmodels/doc/iv/results.html#linearmodels.iv.results.IVResults) for a full list of accessible attributes.
+Once the APS is estimated for each observation, the IV approach allows us to estimate the historical LATE. `estimate_treatment_effect` is our primary IV estimation function, and makes use of the IV2SLS class from the [linearmodels package](https://bashtage.github.io/linearmodels/). As per the package, the function will return an IVResults object. Post-estimation diagnostics and statistics are accessible directly from this object. Please refer to the [object documentation](https://bashtage.github.io/linearmodels/doc/iv/results.html#linearmodels.iv.results.IVResults) for a full list of accessible attributes.
 
-**Note:** Similar to QPS estimation, the inputs can be passed in through a combination of a `data` object or `qps`, `Y`, `Z`, and `D` separately, but they must not have any overlapping columns. Recommended best practice is to use either `data` and index inputs `qps_ind`, `Y_ind`, `Z_ind` and `D_ind` or `qps`, `Y`, `Z`, and `D` separately.
+**Note:** Similar to APS estimation, the inputs can be passed in through a combination of a `data` object or `aps`, `Y`, `Z`, and `D` separately, but they must not have any overlapping columns. Recommended best practice is to use either `data` and index inputs `aps_ind`, `Y_ind`, `Z_ind` and `D_ind` or `aps`, `Y`, `Z`, and `D` separately.
 
 ```python
 import pandas as pd
 import numpy as np
-from mlisne import estimate_treatment_effect
+from IVaps import estimate_treatment_effect
 
-model = estimate_treatment_effect(Y = outcome_variable, Z = treatment_recommendation, D = treatment_assignment, qps = estimated_qps, verbose = False)
+model = estimate_treatment_effect(Y = outcome_variable, Z = treatment_recommendation, D = treatment_assignment, aps = estimated_aps, verbose = False)
 print(model)
 
 # If we know that ML takes only one nondegenerate value (strictly between 0 and 1) in the sample, then the constant term will need to be removed by setting single_nondegen
-model = estimate_treatment_effect(Y = outcome_variable, Z = treatment_recommendation, D = treatment_assignment, qps = estimated_qps, single_nondegen = True)
+model = estimate_treatment_effect(Y = outcome_variable, Z = treatment_recommendation, D = treatment_assignment, aps = estimated_aps, single_nondegen = True)
 
 # Standard statistics
 model.params
@@ -288,26 +288,26 @@ fs.std_errors
 ```
 
 ## Counterfactual Estimation
-Counterfactual ML value estimation is provided through the `estimate_counterfactual_ml` function. The function fits an OLS regression of outcomes on treatment recommendation controlling for QPS, then uses the estimated effect of recommendation to estimate counterfactual outcomes of a different recommendation system.
+Counterfactual ML value estimation is provided through the `estimate_counterfactual_ml` function. The function fits an OLS regression of outcomes on treatment recommendation controlling for APS, then uses the estimated effect of recommendation to estimate counterfactual outcomes of a different recommendation system.
 
 ```python
 import pandas as pd
-from mlisne import estimate_counterfactual_ml, estimate_qps_onnx
+from IVaps import estimate_counterfactual_ml, estimate_aps_onnx
 
 data = pd.read_csv("path_to_your_historical_data.csv")
 ml_path = "path_to_onnx_model.onnx"
-qps = estimate_qps_onnx(ml_path, data[['cts', 'vars']], data[['discrete', 'vars']])
+aps = estimate_aps_onnx(ml_path, data[['cts', 'vars']], data[['discrete', 'vars']])
 
 original_ml_recs = pd.read_csv("original_ml_recs.csv")
 counterfactual_ml_recs = pd.read_csv("counterfactual_ml_recs.csv")
 
-cf_values, ols_model = estimate_counterfactual_ml(Y = data['Y'], Z = data['Z'], qps = qps, recs = original_ml_recs, cf_recs = counterfactual_ml_recs, verbose = True)
+cf_values, ols_model = estimate_counterfactual_ml(Y = data['Y'], Z = data['Z'], aps = aps, recs = original_ml_recs, cf_recs = counterfactual_ml_recs, verbose = True)
 
 mean_counterfactual_value = cf_values.mean()
 ```
 
 ## Model Conversion
-The mlisne API offers an ONNX conversion function `convert_to_onnx` that generalizes the conversion process. The function requires a dummy input to infer the input dtype, allows for renaming of input nodes, and passes downstream any framework specific keyword arguments.
+The IVaps API offers an ONNX conversion function `convert_to_onnx` that generalizes the conversion process. The function requires a dummy input to infer the input dtype, allows for renaming of input nodes, and passes downstream any framework specific keyword arguments.
 ```python
 import pandas as pd
 import numpy as np
@@ -323,7 +323,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y)
 clr = LogisticRegression()
 clr.fit(X_train, y_train)
 
-from mlisne.helpers import convert_to_onnx
+from IVaps.helpers import convert_to_onnx
 
 X_dummy = X[0,:]
 filename = "save_path_to_onnx.onnx"
@@ -336,17 +336,17 @@ convert_to_onnx(model=model, dummy_input=X_dummy, path=filename, framework="skle
 ```
 
 ## Further examples
-- [ONNX Conversion: basic conversion tutorial for supported frameworks](https://github.com/factoryofthesun/mlisne/blob/master/examples/ONNX%20Conversion%20Tutorial.ipynb)
-- [Check Conversion: post ONNX conversion test data generation and verification](https://github.com/factoryofthesun/mlisne/blob/master/examples/Check_Model_Post_Conversion.ipynb)
-- [Sklearn: model training, conversion, data generation, and estimation](https://github.com/factoryofthesun/mlisne/blob/master/examples/Sklearn_Iris_Conversion_Simulation_and_Estimation.ipynb)
-- [Pytorch: neural network with categorical embeddings](https://github.com/factoryofthesun/mlisne/blob/master/examples/Pytorch_Churn_Categorical_Embeddings.ipynb)
-- [Tensorflow: SSDMobilenet conversion and estimation](https://github.com/factoryofthesun/mlisne/blob/master/examples/Tensorflow_SSDMobilenet_Conversion_Example.ipynb)
-- [LightGBM: model training, conversion, and estimation](https://github.com/factoryofthesun/mlisne/blob/master/examples/Light%20GBM%20Basic%20Example.ipynb)
+- [ONNX Conversion: basic conversion tutorial for supported frameworks](https://github.com/factoryofthesun/IVaps/blob/master/examples/ONNX%20Conversion%20Tutorial.ipynb)
+- [Check Conversion: post ONNX conversion test data generation and verification](https://github.com/factoryofthesun/IVaps/blob/master/examples/Check_Model_Post_Conversion.ipynb)
+- [Sklearn: model training, conversion, data generation, and estimation](https://github.com/factoryofthesun/IVaps/blob/master/examples/Sklearn_Iris_Conversion_Simulation_and_Estimation.ipynb)
+- [Pytorch: neural network with categorical embeddings](https://github.com/factoryofthesun/IVaps/blob/master/examples/Pytorch_Churn_Categorical_Embeddings.ipynb)
+- [Tensorflow: SSDMobilenet conversion and estimation](https://github.com/factoryofthesun/IVaps/blob/master/examples/Tensorflow_SSDMobilenet_Conversion_Example.ipynb)
+- [LightGBM: model training, conversion, and estimation](https://github.com/factoryofthesun/IVaps/blob/master/examples/Light%20GBM%20Basic%20Example.ipynb)
 
 # Versioning
 
 # Contributing
-Please contact Richard Liu at <richard.liu@yale.edu> for details on how to contribute to this project. 
+Please contact Richard Liu at <richard.liu@yale.edu> for details on how to contribute to this project.
 
 # Citation
 
@@ -359,6 +359,6 @@ This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENS
 
 ## References
 <a id="1">[1]</a>
-1. Narita, Yusuke and Yata, Kohei. Machine Learning is Natural Experiment (forthcoming). 2020.
+1. Narita, Yusuke and Yata, Kohei. Algorithm is Experiment (forthcoming). 2021.
 
 ## Related Projects

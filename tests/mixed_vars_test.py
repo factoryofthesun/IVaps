@@ -1,4 +1,4 @@
-# Test QPS estimation
+# Test APS estimation
 import sys
 import os
 import pandas as pd
@@ -10,9 +10,8 @@ from sklearn.datasets import load_iris
 import onnxruntime as rt
 from pathlib import Path
 
-from mlisne import estimate_qps_onnx, estimate_qps_user_defined
-from mlisne.qps_old import _estimate_qps_onnx, _estimate_qps_user_defined
-from mlisne.qps import _get_og_order
+from IVaps import estimate_aps_onnx, estimate_aps_user_defined
+from IVaps.aps import _get_og_order
 
 sklearn_logreg = str(Path(__file__).resolve().parents[0] / "test_models" / "logreg_iris.onnx")
 sklearn_logreg_double = str(Path(__file__).resolve().parents[0]  / "test_models" / "logreg_iris_double.onnx")

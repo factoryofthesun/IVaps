@@ -10,6 +10,10 @@ from onnx import helper, numpy_helper
 from onnx import TensorProto
 from onnxmltools.convert.common.data_types import FloatTensorType, DoubleTensorType, Int64TensorType, Int32TensorType, StringTensorType, BooleanTensorType
 from numba import jit, njit
+from numba.core.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
+
+warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
+warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 def run_onnx_session(inputs: Sequence[np.ndarray], sess: rt.InferenceSession, input_names: Sequence[str],
                      label_names: Sequence[str] = None, fcn = None, **kwargs):
@@ -206,7 +210,7 @@ def convert_to_onnx(model, framework: str, dummy_input1 = None, dummy_input2 = N
             else:
                 d_axes.update({key: {0:'N'} for key in output_names})
             export(model, dummy_input, output_path, input_names=list(input_names), output_names=output_names,
-                              dynamic_axes=d_axes, target_opset = target_opset, **kwargs)
+                              dynamic_axes=d_axes, **kwargs)
         return True
 
     if framework == "tensorflow":
@@ -380,35 +384,43 @@ def convert_data_to_pb(pickle_path: str, output_folder: str ="test_data_set_0", 
             print("Successfully stored input {} in {}".format(name, pb_file_location))
         idx += 1
 
-@jit(parallel=True)
+@jit(nopython=True)
 def standardize(X):
     """ Standardize 2D array of variables """
-    mu = np.nanmean(X, axis=0)
-    sigma = np.nanstd(X, axis=0)
+    mu = []
+    sigma = []
+    for i in range(X.shape[1]):
+        mu.append(np.nanmean(X[:,i]))
+        sigma.append(np.nanstd(X[:,i]))
+    mu = np.array(mu)
+    sigma = np.array(sigma)
     X = (X - mu)/sigma
     return (X, mu, sigma)
 
-@jit(parallel = True)
-def cumMean(X, S, is_list = False):
+@jit(nopython=True)
+def cumMean1D(X, S):
     """ Return mean of every S rows """
-    if is_list == True:
-        nobs = int(X[0].shape[0]/S)
-        ret = np.empty((nobs, 0))
-        for x_tmp in X:
-            i = 0
-            ret_tmp = []
-            while (i+1)*S <= x_tmp.shape[0]:
-                ret_tmp.append(np.mean(x_tmp[(i*S):(i+1)*S]))
-                i += 1
-            ret_tmp = np.array(ret_tmp)
-            ret = np.column_stack((ret, ret_tmp))
-    else:
+    i = 0
+    ret = []
+    while (i+1)*S <= X.shape[0]:
+        ret.append(np.mean(X[(i*S):(i+1)*S]))
+        i += 1
+    ret = np.array(ret)
+    return ret
+
+@jit(nopython=True)
+def cumMean2D(X, S):
+    """ Return mean of every S rows for every delta """
+    nobs = int(X[0].shape[0]/S)
+    ret = np.empty((nobs, 0))
+    for x_tmp in X:
         i = 0
-        ret = []
-        while (i+1)*S <= X.shape[0]:
-            ret.append(np.mean(X[(i*S):(i+1)*S]))
+        ret_tmp = []
+        while (i+1)*S <= x_tmp.shape[0]:
+            ret_tmp.append(np.mean(x_tmp[(i*S):(i+1)*S]))
             i += 1
-        ret = np.array(ret)
+        ret_tmp = np.array(ret_tmp)
+        ret = np.column_stack((ret, ret_tmp))
     return ret
 
 def _olive_convert(model_name: str, framework: str, test_data_path: str = None, convert_from_pickle: bool = False, input_pickle: str = None,

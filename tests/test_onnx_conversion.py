@@ -9,7 +9,8 @@ from pathlib import Path
 from sklearn.datasets import load_iris
 import onnxruntime as rt
 from pathlib import Path
-
+import torch
+import torch.nn as nn
 from mlisne.helpers import convert_to_onnx
 
 model_path = str(Path(__file__).resolve().parents[1] / "examples" / "models")
@@ -28,9 +29,6 @@ def iris_model():
 
 @pytest.fixture
 def churn_model():
-    import torch
-    import torch.nn as nn
-
     # Model without categorical embeddings
     class Model(nn.Module):
 
@@ -64,9 +62,6 @@ def churn_model():
 
 @pytest.fixture
 def churn_cat_model():
-    import torch
-    import torch.nn as nn
-
     # Model with categorical embeddings
     class CatModel(nn.Module):
 

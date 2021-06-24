@@ -141,3 +141,4 @@ logs/
 note.ipynb
 *.npy
 *.html
+examples/data

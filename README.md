@@ -1,5 +1,5 @@
 # Machine Learning is Natural Experiment
-**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://IVaps.readthedocs.io/en/latest/)**
+**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://mlisne.readthedocs.io/en/latest/)**
 <details>
 <summary><strong>Table of Contents</strong></summary>
 
@@ -60,7 +60,7 @@ Narita 20 proposes an instrumental variables approach to causal effect estimatio
   <img src="/images/framework_2sls.png" width="40%" height="40%"/>
 </p>
 
-For more detail on the theoretical framework, please refer to the paper "Machine Learning is Natural Experiment" (Narita and Yata, forthcoming) or the [method page](https://IVaps.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
+For more detail on the theoretical framework, please refer to the paper "Machine Learning is Natural Experiment" (Narita and Yata, forthcoming) or the [method page](https://mlisne.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
 
 ## IVaps Package
 The IVaps package is an implementation of the treatment effect estimation method and paper described above. This package provides functions for the two primary estimation steps -- APS estimation and treatment effect estimation -- and is ML framework-agnostic.

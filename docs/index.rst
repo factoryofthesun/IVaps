@@ -9,12 +9,12 @@ IVAPS: Algorithm is Experiment Documentation
 Overview
 ~~~~~~~~
 
-The IVaps package is a generic implementation of the treatment effect estimation method proposed in :cite:`Narita2021`. The package provides functions for APS estimation and treatment effect estimation, and is designed to be flexible to the researcher's specific treatment interface.
+The IVaps package is an implementation of the treatment effect estimation method proposed in :cite:`Narita2021`. The key to the method is an object which captures the average probability of an algorithm :math:`A` recommending treatment for an individual with observable covariates :math:`x` in a shrinking neighborhood around :math:`x`. This object is dubbed the Approximate Propensity Score (APS) by :cite:`Narita2021`. The package provides functions for APS estimation and treatment effect estimation, and is designed to be flexible to the researcher's specific treatment interface.
 
 Supported ML Frameworks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The ML-agnostic APS estimation function ``estimate_aps_onnx`` only accepts models in the ONNX framework in order to maintain the generalized implementation. The module provides an ONNX conversion function ``convert_to_onnx`` that currently supports conversion from the following frameworks:
+The APS estimation function ``estimate_aps_onnx`` only accepts models in the ONNX framework in order to maintain the generalized implementation. The module provides an ONNX conversion function ``convert_to_onnx`` that currently supports conversion from the following frameworks:
 
 - `Sklearn <https://github.com/onnx/sklearn-onnx/>`_
 - `Pytorch <https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html>`_

@@ -1,5 +1,5 @@
 # Machine Learning is Natural Experiment
-**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://IVaps.readthedocs.io/en/latest/)**
+**[Overview](#overview)** | **[Installation](#installation)** | **[Usage](#usage)** | **[Acknowledgements](#acknowledgements)** | **[Documentation](https://mlisne.readthedocs.io/en/latest/)**
 <details>
 <summary><strong>Table of Contents</strong></summary>
 
@@ -31,7 +31,7 @@
 ## ML as a Data Production Service
 Today’s society increasingly resorts to machine learning (“AI”) and other algorithms for decision-making and resource allocation. For example, judges make legal judgements using predictions from supervised machine learning (descriptive regression). Supervised learning is also used by governments to detect potential criminals and terrorists, and financial companies (such as banks and insurance companies) to screen potential customers. Tech companies like Facebook, Microsoft, and Netflix allocate digital content by reinforcement learning and bandit algorithms. Uber and other ride sharing services adjust prices using their surge pricing algorithms to take into account local demand and supply information. Retailers and e-commerce platforms like Amazon engage in algorithmic pricing. Similar algorithms are invading into more and more high-stakes treatment assignment, such as education, health, and military.
 
-All of the above, seemingly diverse examples share a common trait: An algorithm makes decisions based only on observable input variables the data-generating algorithm uses. Conditional on the observable variables, therefore, algorithmic treatment decisions are (quasi-)randomly assigned. This property makes algorithm-based treatment decisions **an instrumental variable we can use for measuring the causal effect of the final treatment assignment**. The algorithm-based instrument may produce regression-discontinuity-style local variation (e.g. machine judges), stratified randomization (e.g. several bandit and reinforcement leaning algorithms), or mixes of the two. Narita 2021 introduces the formal framework and characterizes the sources of causal effect identification.[[1]](#1)
+All of the above, seemingly diverse examples share a common trait: An algorithm makes decisions based only on observable input variables the data-generating algorithm uses. Conditional on the observable variables, therefore, algorithmic treatment decisions are (quasi-)randomly assigned. This property makes algorithm-based treatment decisions **an instrumental variable we can use for measuring the causal effect of the final treatment assignment**. The algorithm-based instrument may produce regression-discontinuity-style local variation (e.g. machine judges), stratified randomization (e.g. several bandit and reinforcement leaning algorithms), or mixes of the two. Narita and Yata 2021 introduces the formal framework and characterizes the sources of causal effect identification.[[1]](#1)
 
 ## Framework
 On a high level, the Approximate Propensity Score method works by exploiting the fact that all inputs into a machine learning model are observable to the researcher, and thus controlling for these inputs allows one to make use of the feature space in which machine learning algorithms are effectively stochastic -- there is random assignment between two (or more) possible discrete outputs. For algorithm-based treatment decisions, we know that the algorithm output strongly affects the ultimate treatment decision (either because the algorithm *is* the treatment decision, or a final arbiter relies on the algorithm output to make the final assignment). Thus in theory, we should be able to use the output predictions of algorithms which mediate any treatment decision regime to estimate the causal effects of the treatments.
@@ -55,12 +55,12 @@ The Approximate Propensity Score (APS) is an object that captures all the experi
   <img src="/images/aps_chart.PNG" width="50%" height="50%"/>
 </p>
 
-Narita 20 proposes an instrumental variables approach to causal effect estimation. In particular, a 2SLS regression framework instrumenting treatment assignment with the algorithmic recommendation, controlling for estimated APS.
+Narita and Yata 2021 proposes an instrumental variables approach to causal effect estimation. In particular, a 2SLS regression framework instrumenting treatment assignment with the algorithmic recommendation, controlling for estimated APS.
 <p align="center" width = "100%">
-  <img src="/images/framework_2sls.png" width="40%" height="40%"/>
+  <img src="/images/framework_2sls.png" width="50%" height="50%"/>
 </p>
 
-For more detail on the theoretical framework, please refer to the paper "Machine Learning is Natural Experiment" (Narita and Yata, forthcoming) or the [method page](https://IVaps.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
+For more detail on the theoretical framework, please refer to the paper "Algorithm is Experiment" (Narita and Yata, forthcoming) or the [method page](https://mlisne.readthedocs.io/en/latest/method.html) in the documentation.[[1]](#1)
 
 ## IVaps Package
 The IVaps package is an implementation of the treatment effect estimation method and paper described above. This package provides functions for the two primary estimation steps -- APS estimation and treatment effect estimation -- and is ML framework-agnostic.

@@ -237,24 +237,6 @@ aps = estimate_aps_user_defined(data = data, ml = function_that_needs_new_column
 aps = estimate_aps_user_defined(data = data, ml = function_that_needs_new_column_ordering, pandas = True, pandas_cols = ['list', 'of', 'column', 'names'], reorder = new_ordering)
 ```
 
-### Mixed Variables and Missing Values Treatment
-APS estimation is also equipped to handle mixed variables (variables that have both a discrete and continuous part), and will treat mixed variables as a subset of the continuous variables. The user will need to pass a dictionary ``L``, where the keys are the indices of ``X_c`` that are mixed, and the values are sets of the discrete values each variable takes on. During estimation, if an observation of a continuous variable equals any of its discrete parts, then it will be treated as a discrete variable for that observation. Similarly, if the function encounters an observation of a missing value, then the variable will be assumed to be discrete for that sample observation.
-
-```python
-import pandas as pd
-import numpy as np
-from IVaps import estimate_aps_onnx
-
-data_with_missing = pd.read_csv("path_to_your_historical_data_with_missing.csv")
-ml_path = "path_to_your_onnx_model.onnx"
-
-# Create mixed variables dictionary
-L = {0: {0}, 3: {5, 10}} # This indicates that the 0th and 3rd index continuous variables are mixed variables with the passed discrete parts
-
-# APS estimation
-aps = estimate_aps_onnx(ml_path, data = data_with_missing, L = L)
-```
-
 ## IV Estimation
 Once the APS is estimated for each observation, the IV approach allows us to estimate the historical LATE. `estimate_treatment_effect` is our primary IV estimation function, and makes use of the IV2SLS class from the [linearmodels package](https://bashtage.github.io/linearmodels/). As per the package, the function will return an IVResults object. Post-estimation diagnostics and statistics are accessible directly from this object. Please refer to the [object documentation](https://bashtage.github.io/linearmodels/doc/iv/results.html#linearmodels.iv.results.IVResults) for a full list of accessible attributes.
 

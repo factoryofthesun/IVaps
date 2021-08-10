@@ -311,7 +311,7 @@ def covariate_balance_test(aps = None, X = None, Z = None, data = None, X_ind = 
     exog = np.column_stack((Z, aps))
     exog = pd.DataFrame(exog, columns = ['Z', 'aps'])
     exog = exog.iloc[obs_tokeep[0],:]
-    X = X[obs_tokeep]
+    X = X.iloc[obs_tokeep[0]]
     if cov_type != "robust":
         cov_type = "unadjusted"
 

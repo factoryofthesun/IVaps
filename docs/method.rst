@@ -54,7 +54,7 @@ Under Assumptions 1-3,
 1. :math:`E[Y_{1i}-Y_{0i}| X_i=x]` and :math:`E[D_i(1)-D_i(0)| X_i=x]` are identified for every :math:`x\in \int{{\cal X}}` such that :math:`p^{A}(x)\in (0,1)`.
 2. Let :math:`A` be any open subset of :math:`{\cal X}` such that :math:`p^{A}(x)` exists for all :math:`x\in A`. Then either :math:`E[Y_{1i}-Y_{0i}| X_i \in A]` or :math:`E[D_i(1)-D_i(0)| X_i \in A]`, or both are identified only if :math:`p^{A}(x)\in (0,1)` for almost every :math:`x\in A` (with respect to the Lebesgue measure).
 
-This proposition suggests that by conditioning on APS, A-based treatment recommendations are quasi-randoAy assigned. We can thus make use of A treatment recommendations as an instrument for treatment assignment, conditional on APS. There are several methods for applying instrumental variables in estimating causal treatment effects. In this package we follow :cite:`Narita2021` in applying two stage least squares (2SLS), though it is certainly possible other methods are added in the future.
+This proposition suggests that by conditioning on APS, A-based treatment recommendations are quasi-randomly assigned. We can thus make use of A treatment recommendations as an instrument for treatment assignment, conditional on APS. There are several methods for applying instrumental variables in estimating causal treatment effects. In this package we follow :cite:`Narita2021` in applying two stage least squares (2SLS), though it is certainly possible other methods are added in the future.
 
 The details of the estimation procedure are as follows.
 
@@ -73,9 +73,9 @@ where bandwidth :math:`\delta_n` shrinks toward zero as the sample size :math:`n
 
 Let :math:`\hat\beta_1` denote the 2SLS estimator of :math:`\beta_1` in the above regression.
 
-The above regression uses true APS :math:`p^{A}(X_i;\delta_n)`, but it may be difficult to analytically compute if :math:`A` is complex. In such a case, we propose a method to approximate :math:`p^{A}(X_i;\delta_n)` using brute force simulation. We draw a value of :math:`x` from the uniform distribution on :math:`{\cal X}\cap N(X_i,\delta_n)` a number of times, compute :math:`A(x)` for each draw, and take the average of :math:`A(x)` over the draws.
+The above regression uses true APS :math:`p^{A}(X_i;\delta_n)`, but it may be difficult to analytically compute if :math:`A` is complex. In such a case, we propose a method to approximate :math:`p^{A}(X_i;\delta_n)` using brute force simulation. We draw a value of :math:`x` from the uniform distribution on :math:`B(X_i,\delta_n)` a number of times, compute :math:`A(x)` for each draw, and take the average of :math:`A(x)` over the draws.
 
-Formally, let :math:`X_1^*,...,X_{S_n}^*` be :math:`S_n` independent draws from the uniform distribution on :math:`{\cal X}\cap N(X_i,\delta_n)`, and calculate :math:`p^s(X_i;\delta_n)=\frac{1}{S_n}\sum_{s=1}^{S_n}A(X_{i,s}^*)`.
+Formally, let :math:`X_1^*,...,X_{S_n}^*` be :math:`S_n` independent draws from the uniform distribution on :math:`B(X_i,\delta_n)`, and calculate :math:`p^s(X_i;\delta_n)=\frac{1}{S_n}\sum_{s=1}^{S_n}A(X_{i,s}^*)`.
 We compute :math:`p^s(X_i;\delta_n)` for each :math:`i=1,...,n` independently across :math:`i` so that :math:`p^s(X_1;\delta_n),...,p^s(X_n;\delta_n)` are independent of each other. For fixed :math:`n` and :math:`X_i`, the approximation error relative to true :math:`p^{A}(X_i;\delta_n)` has a :math:`1/\sqrt{S_n}` rate of convergence.
 
 This rate does not depend on the dimension of :math:`X_i`, so the simulation error can be made negligible even when :math:`X_i` is high dimensional.
@@ -85,13 +85,13 @@ Now consider the following simulation version of the 2SLS regression using the o
 .. math::
 
   \begin{align}
-  D_i&=\gamma_0(1-I)+\gamma_1 Z_i+\gamma_2 p^s(X_i;\delta_n)+\nu_i\\
-  Y_i&=\beta_0(1-I)+\beta_1 D_i +\beta_2 p^s(X_i;\delta_n)+\epsilon_i.
+  D_i&=\gamma_0(1-I_n)+\gamma_1 Z_i+\gamma_2 p^s(X_i;\delta_n)+\nu_i\\
+  Y_i&=\beta_0(1-I_n)+\beta_1 D_i +\beta_2 p^s(X_i;\delta_n)+\epsilon_i.
   \end{align}
 
-Let :math:`\hat\beta_1^s` denote the 2SLS estimator of :math:`\beta_1` in the simulation-based regression. This regression is the same as the original structural 2SLS regression except that we use the simulated APS :math:`p^s(X_i;\delta_n)` in place of :math:`p^{A}(X_i;\delta_n)`.
+:math:`I_n` is the indicator that :math:`A(X_i)` takes on only one nondegenerate value in the sample. If the support of :math:`A(X_i)` (in the population) contains only one value in :math:`(0,1)`, :math:`p^{A}(X_i;\delta_n)` is asymptotically constant conditional on :math:`p^{A}(X_i;\delta_n)\in(0, 1)`. Let :math:`\hat\beta_1^s` denote the 2SLS estimator of :math:`\beta_1` in the simulation-based regression. This regression is the same as the original structural 2SLS regression except that we use the simulated APS :math:`p^s(X_i;\delta_n)` in place of :math:`p^{A}(X_i;\delta_n)`.
 
-In practice, :math:`\hat\beta_1^s` will be the estimated causal treatment effect. Under additional regularity conditions, this estimator is consistent for a well-defined causal effect. The details are ommitted here for brevity. Please refer to :cite:`Narita2020` for more formal statements and proofs of the method described.
+In practice, :math:`\hat\beta_1^s` will be the estimated causal treatment effect. Under additional regularity conditions, this estimator is consistent for a well-defined causal effect. The details are ommitted here for brevity. Please refer to :cite:`Narita2021` for more formal statements and proofs of the method described.
 
 Examples
 --------

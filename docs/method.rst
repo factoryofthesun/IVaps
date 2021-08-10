@@ -8,7 +8,7 @@ Setup
 We are interested in the effect of some binary treatment :math:`D_i\in \{0,1\}` on some outcome of interest :math:`Y_i`.
 Let :math:`Y_i(1)` and :math:`Y_i(0)` represent potential outcomes that would be realized if individual :math:`i` were treated and not treated, respectively. The observed outcome :math:`Y_i` can therefore be written as :math:`Y_i=D_iY_i(1)+(1-D_i)Y_i(0)`.
 
-The treatment assignment :math:`D_i` may be influenced by a binary treatment recommendation :math:`Z_i\in\{0,1\}` made by some machine learning algorithm (A). Let the binary variable :math:`D_i(z)` be the potential treatment assignment when :math:`Z_i=z\in\{0,1\}`. :math:`D_i(z)=1` indicates that individual :math:`i` is treated when the treatment recommendation is :math:`Z_i=z`. Observed treatment :math:`D_i` is therefore :math:`D_i=Z_iD_i(1)+(1-Z_i)D_i(0)`. Define :math:`Y_zi=D_i(z)Y_i(1)+(1-D_i(z))Y_i(0)` for each :math:`z=0,1`.
+The treatment assignment :math:`D_i` may be influenced by a binary treatment recommendation :math:`Z_i\in\{0,1\}` made by some machine learning algorithm (A). Let the binary variable :math:`D_i(z)` be the potential treatment assignment when :math:`Z_i=z\in\{0,1\}`. :math:`D_i(z)=1` indicates that individual :math:`i` is treated when the treatment recommendation is :math:`Z_i=z`. Observed treatment :math:`D_i` is therefore :math:`D_i=Z_iD_i(1)+(1-Z_i)D_i(0)`. Define :math:`Y_{zi}=D_i(z)Y_i(1)+(1-D_i(z))Y_i(0)` for each :math:`z=0,1`.
 
 We impose the exclusion restriction that the treatment recommendation :math:`Z_i` does not affect the observed outcome other than through the treatment assignment :math:`D_i`. This allows us to define the potential outcomes indexed against the treatment assignment :math:`D_i` alone.
 

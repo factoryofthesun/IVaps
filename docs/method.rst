@@ -10,7 +10,7 @@ Let :math:`Y_i(1)` and :math:`Y_i(0)` represent potential outcomes that would be
 
 The treatment assignment :math:`D_i` may be influenced by a binary treatment recommendation :math:`Z_i\in\{0,1\}` made by some machine learning algorithm (A). Let the binary variable :math:`D_i(z)` be the potential treatment assignment when :math:`Z_i=z\in\{0,1\}`. :math:`D_i(z)=1` indicates that individual :math:`i` is treated when the treatment recommendation is :math:`Z_i=z`. Observed treatment :math:`D_i` is therefore :math:`D_i=Z_iD_i(1)+(1-Z_i)D_i(0)`. We impose the exclusion restriction that the treatment recommendation :math:`Z_i` does not affect the observed outcome other than through the treatment assignment :math:`D_i`. This allows us to define the potential outcomes indexed against the treatment assignment :math:`D_i` alone.
 
-We consider algorithms that make treatment recommendations based solely on individual :math:`i`'s predetermined, observable covariates :math:`X_i \in \mathbb{R}^p`. Let the function :math:`A:\mathbb{R}^p\rightarrow [0,1]` represent the *decision algorithm*, where :math:`A(X_i)=\Pr(Z_i=1|X_i)` is the probability that the treatment recommendation is turned on for individual :math:`i` with covariates :math:`X_i`. The central assumption is that the analysis knows function :math:`A` and is able to simulate it. That is, the analyst is able to compute the recommendation probability :math:`A(x)` given any input value :math:`x \in \mathbb{R}^p`. The treatment recommendation :math:`Z_i` for individual :math:`i` is then randoAy determined on with probability :math:`A(X_i)` independent of everything else.
+We consider algorithms that make treatment recommendations based solely on individual :math:`i`'s predetermined, observable covariates :math:`X_i \in \mathbb{R}^p`. Let the function :math:`A:\mathbb{R}^p\rightarrow [0,1]` represent the *decision algorithm*, where :math:`A(X_i)=\Pr(Z_i=1|X_i)` is the probability that the treatment recommendation is turned on for individual :math:`i` with covariates :math:`X_i`. The central assumption is that the analysis knows function :math:`A` and is able to simulate it. That is, the analyst is able to compute the recommendation probability :math:`A(x)` given any input value :math:`x \in \mathbb{R}^p`. The treatment recommendation :math:`Z_i` for individual :math:`i` is determined with probability :math:`A(X_i)` independent of everything else.
 
 APS
 ---
@@ -20,7 +20,7 @@ In order to understand what causal effects can be learned from the data :math:`(
 
 		p^{A}(x;\delta) \equiv\frac{\int_{B(x,\delta)}A(x^*)dx^*}{\int_{B(x,\delta)}dx^*},
 
-where :math:B(x,\delta)=\{x^*\in\mathbb{R}^p:\|x-x^*\|\le\delta\}` is the :math:`\delta`-ball around :math:`x\in {\cal X}`. Here, :math:`\|\cdot\|` denotes the Euclidean distance on :math:`\mathbb{R}^p`. We assume that :math:`A` is a :math:`{\cal L}^p`-measurable function so that the integrals exist.
+where :math:`B(x,\delta)=\{x^*\in\mathbb{R}^p:\|x-x^*\|\le\delta\}` is the :math:`\delta`-ball around :math:`x\in {\cal X}`. Here, :math:`\|\cdot\|` denotes the Euclidean distance on :math:`\mathbb{R}^p`. We assume that :math:`A` is a :math:`{\cal L}^p`-measurable function so that the integrals exist.
 
 We then can define APS as follows.
 
@@ -30,7 +30,7 @@ We then can define APS as follows.
 
 Intuitively, APS at :math:`x` is the average probability of a treatment recommendation in a shrinking neighborhood of :math:`x`. To make common :math:`\delta` for all dimensions reasonable, we normalize :math:`X_{ij}` to have mean zero and variance one for each :math:`j=1,...,p`.
 
-.. image:: /images/aps_chart.png
+.. image:: /images/aps_chart_labeled.jpg
   :align: center
   :width: 350
   :height: 250

@@ -147,7 +147,7 @@ We are constantly exposed to digital information (movie, music, news, search res
 
 1. Bandit Algorithms
 
-The algorithms below first use past data and supervised learning to estimate the conditional means and variances of potential outcomes, :math:`E[Y_i(z)|X_i]` and :math:`\Var(Y_i(z)|X_i)`, for each :math:`z\in \{0, 1\}`.
+The algorithms below first use past data and supervised learning to estimate the conditional means and variances of potential outcomes, :math:`E[Y_i(z)|X_i]` and :math:`Var(Y_i(z)|X_i)`, for each :math:`z\in \{0, 1\}`.
 Let :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` denote the estimators.
 The algorithms then use :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` to determine the treatment assignment for individual :math:`i`.
 
@@ -157,7 +157,7 @@ The algorithms then use :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` to determ
 
 	.. math::
 
-		Z^{TS}_i \equiv \argmax_{z\in \{0, 1\}}y(z), ~~A^{TS}(X_i)= E[\argmax_{z\in \{0, 1\}}y(z)|X_i]
+		Z^{TS}_i \equiv arg max_{z\in \{0, 1\}}y(z), ~~A^{TS}(X_i)= E[arg max_{z\in \{0, 1\}}y(z)|X_i]
 
 	where :math:`y(z)\sim {\cal N}(\mu_z(X_i), \sigma^2_z(X_i))` independently across :math:`z`.
 
@@ -185,7 +185,7 @@ The algorithms then use :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` to determ
 	.. math::
 
 		\begin{align*}
-			Z^{UCB}_i &\equiv \argmax_{z=0, 1}	\{\mu_z(X_i)+\alpha(X_i) \sigma_z(X_i)\},\\
+			Z^{UCB}_i &\equiv arg max_{z=0, 1}	\{\mu_z(X_i)+\alpha(X_i) \sigma_z(X_i)\},\\
 			A^{UCB}(x) &=\begin{cases}
 				0 & \ \ \ \text{if $\mu_1(x)+\alpha(x)\sigma_1(x)<\mu_0(x)+\alpha(x)\sigma_0(x)$}\\
 				1 & \ \ \ \text{if $\mu_1(x)+\alpha(x)\sigma_1(x)>\mu_0(x)+\alpha(x)\sigma_0(x)$},
@@ -243,8 +243,8 @@ The algorithms then use :math:`\mu_z(X_i)` and :math:`\sigma^2_z(X_i)` to determ
 
 			\begin{align*}
 			Z^{\epsilon}_{ti}&\equiv \begin{cases}
-			\argmax_{z=0, 1}\hat Q(X_{ti}, z) & \ \ \ \text{with probability $1-\frac{\epsilon}{2}$}\\
-			1-\argmax_{z=0, 1}\hat Q(X_{ti}, z) & \ \ \ \text{with probability $\frac{\epsilon}{2}$},
+			arg max_{z=0, 1}\hat Q(X_{ti}, z) & \ \ \ \text{with probability $1-\frac{\epsilon}{2}$}\\
+			1-arg max_{z=0, 1}\hat Q(X_{ti}, z) & \ \ \ \text{with probability $\frac{\epsilon}{2}$},
 			\end{cases}\\
 			A^{\epsilon}(x)&=\begin{cases}
 			\frac{\epsilon}{2} & \ \ \ \text{if $\hat Q(x,1)<\hat Q(x,0)$}\\
@@ -318,7 +318,7 @@ Let :math:`c_1,...,c_K` be the centroids of the :math:`K` groups, and define a s
 
 .. math::
 
-	C(x)\equiv\argmin_{k\in \{1,...,K\}}\|x-c_k\|.
+	C(x)\equiv arg min_{k\in \{1,...,K\}}\|x-c_k\|.
 
 If :math:`C(x)` is a singleton, :math:`x` belongs to the only group in :math:`C(x)`.
 If :math:`C(x)` contains more than one indices, the group to which :math:`x` belongs is arbitrarily determined.

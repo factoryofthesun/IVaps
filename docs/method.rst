@@ -32,7 +32,7 @@ We then can define APS as follows.
 
 Intuitively, APS at :math:`x` is the average probability of a treatment recommendation in a shrinking neighborhood of :math:`x`. To make common :math:`\delta` for all dimensions reasonable, we normalize :math:`X_{ij}` to have mean zero and variance one for each :math:`j=1,...,p`.
 
-.. image:: https://github.com/factoryofthesun/IVaps/blob/master/images/aps_chart_labeled.jpg
+.. image:: _static/images/aps_chart_labeled.jpg
   :align: center
   :width: 350
   :height: 250

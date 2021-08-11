@@ -2,6 +2,7 @@
 from linearmodels.iv import IV2SLS
 from linearmodels.system.model import SUR
 from statsmodels.api import add_constant
+from statsmodels.multivariate.multivariate_ols import _MultivariateOLS
 import numpy as np
 import pandas as pd
 
@@ -109,6 +110,93 @@ def estimate_treatment_effect(aps = None, Y = None, Z = None, D = None, data = N
             results = IV2SLS(lm_inp['Y'], lm_inp[['Z', 'aps']], None, None).fit(cov_type='unadjusted')
         else:
             results = IV2SLS(lm_inp['Y'], lm_inp[['const', 'Z', 'aps']], None, None).fit(cov_type='unadjusted')
+    else:
+        raise NotImplementedError(f"Estimator option {estimator} not implemented yet!")
+
+    if verbose:
+        print(results)
+
+    return results
+
+def estimate_treatment_effect_controls(aps, Y, Z, D, W,
+                              estimator: str = "2SLS", verbose: bool = True):
+    """Main treatment effect estimation function with added controls
+
+    Parameters
+    -----------
+    aps: array-like, default: None
+        Array of estimated APS values
+    Y: array-like, default: None
+        Array of outcome variables
+    Z: array-like, default: None
+        Array of treatment recommendations
+    D: array-like, default: None
+        Array of treatment assignments
+    W: array-like, default: None
+        Array of control variables
+    estimator: str, default: "2SLS"
+        Method of IV estimation
+    verbose: bool, default: True
+        Whether to print output of estimation
+
+    Returns
+    -----------
+    IVResults
+        Fitted IV model object
+
+    Notes
+    -----
+    Treatment effect is estimated using IV estimation. The default is to use the 2SLS method of estimation, with the equations illustrated below.
+
+    .. math::
+
+        D_i = \\gamma_0(1-I) + \\gamma_1 Z_i + \\gamma_2 p^s(X_i;\\delta) + \\gamma_3 W_i + v_i \\
+        Y_i = \\beta_0(1-I) + \\beta_1 D_i + \\beta_2 p^s(X_i;\\delta) + + \\beta_3 W_i \\epsilon_i
+
+    :math:`\\beta_1` is our causal estimation of the treatment effect. :math:`I` is an indicator for if the ML funtion takes only a single nondegenerate value in the sample.
+    """
+
+    aps = np.array(aps)
+    Y = np.array(Y)
+    Z = np.array(Z)
+    D = np.array(D)
+    W = np.array(W)
+
+    # Use only observations where aps is nondegenerate
+    obs_tokeep = np.nonzero((aps > 0) & (aps < 1))
+    print(f"We will fit on {len(obs_tokeep[0])} values out of {len(Y)} from the dataset for which the APS estimation is nondegenerate.")
+    assert len(obs_tokeep[0]) > 0
+
+    aps = aps[obs_tokeep[0]]
+    Y = Y[obs_tokeep[0]]
+    Z = Z[obs_tokeep[0]]
+    D = D[obs_tokeep[0]]
+    W = W[obs_tokeep[0]]
+
+    cols = {"aps":aps, "Y":Y, "Z":Z, "D":D}
+    exog = ["aps"]
+    constant = False
+    if len(W.shape) > 1:
+        for i in range(W.shape[1]):
+            cols["W"+str(i)] =  W[:,i]
+            exog.append("W"+str(i))
+            constant = (len(np.unique(W[:,i])) == 1) | constant
+    else:
+        constant = len(np.unique(W)) == 1
+        cols["W"] =  W
+        exog.append("W")
+    # Check for single non-degeneracy
+    constant = (len(np.unique(aps)) == 1) | constant
+    if not constant:
+        cols["const"] = np.ones(len(Y))
+        exog.append("const")
+
+    df = pd.DataFrame(cols)
+
+    if estimator == "2SLS":
+        results = IV2SLS(df['Y'], df[exog], df['D'], df['Z']).fit(cov_type='robust')
+    elif estimator == "OLS":
+        results = IV2SLS(df['Y'], df[exog+['Z']], None, None).fit(cov_type='unadjusted')
     else:
         raise NotImplementedError(f"Estimator option {estimator} not implemented yet!")
 
@@ -311,6 +399,7 @@ def covariate_balance_test(aps = None, X = None, Z = None, data = None, X_ind = 
     exog = np.column_stack((Z, aps))
     exog = pd.DataFrame(exog, columns = ['Z', 'aps'])
     exog = exog.iloc[obs_tokeep[0],:]
+    X.reset_index(drop=True, inplace=True)
     X = X.iloc[obs_tokeep[0]]
     if cov_type != "robust":
         cov_type = "unadjusted"
@@ -329,7 +418,6 @@ def covariate_balance_test(aps = None, X = None, Z = None, data = None, X_ind = 
     # Joint hypothesis test: use multivariate_OLS from statsmodels
     # Edge case: single variable then joint test is the same as the original
     if len(X_labels) > 1:
-        from statsmodels.multivariate.multivariate_ols import _MultivariateOLS
         mv_ols_joint = _MultivariateOLS(X, exog).fit()
         L = np.zeros((1,3))
         L[:,1] = 1
@@ -344,12 +432,120 @@ def covariate_balance_test(aps = None, X = None, Z = None, data = None, X_ind = 
         res_dict[x_var]['coef'] = mv_ols_res.params[f"{x_var}_Z"]
         res_dict[x_var]['p'] = mv_ols_res.pvalues[f"{x_var}_Z"]
         res_dict[x_var]['t'] = mv_ols_res.tstats[f"{x_var}_Z"]
-        res_dict[x_var]['n'] = mv_ols_res.nobs
+        res_dict[x_var]['n'] = mv_ols_res.nobs/len(X_labels)
         res_dict[x_var]['stderr'] = mv_ols_res.std_errors[f"{x_var}_Z"]
     if mv_test_res is None:
         res_dict['joint'] = {}
         res_dict['joint']['p'] = mv_ols_res.pvalues[f"{X_labels[0]}_Z"]
         res_dict['joint']['t'] = mv_ols_res.tstats[f"{X_labels[0]}_Z"]
+    else:
+        res_dict['joint'] = {}
+        res_dict['joint']['p'] = mv_test_res.results['Z']['stat'].iloc[0, 4]
+        res_dict['joint']['f'] = mv_test_res.results['Z']['stat'].iloc[0, 3]
+
+    return (mv_ols_res, res_dict)
+
+def covariate_balance_test_controls(aps, X, Z, W, cov_type = "robust", verbose: bool = True):
+    """Covariate Balance Test
+
+    Parameters
+    -----------
+    aps: array-like, default: None
+        Array of estimated APS values
+    X: array-like, default: None
+        Array of covariates to test
+    Z: array-like, default: None
+        Array of treatment recommendations
+    W: array-like, default: None
+        Array of control variables
+    cov_type: str, default: "robust"
+        Covariance type of SUR. Any value other than "robust" defaults to simple (nonrobust) covariance.
+    verbose: bool, default: True
+        Whether to print output for each test
+
+    Returns
+    -----------
+    tuple(SystemResults, dict(X, dict(stat_label, value)))
+        Tuple containing the fitted SUR model results and a dictionary containing the results of covariate balance estimation for each covariate as well as the joint hypothesis.
+
+    Notes
+    -----
+    This function estimates a system of Seemingly Unrelated Regression (SUR) as defined in the linearmodels package.
+    """
+
+    aps = np.array(aps)
+    X = np.array(X)
+    Z = np.array(Z)
+    W = np.array(W)
+
+    # Use only observations where aps is nondegenerate
+    obs_tokeep = np.nonzero((aps > 0) & (aps < 1))
+    print(f"We will fit on {len(obs_tokeep[0])} values out of {len(Y)} from the dataset for which the APS estimation is nondegenerate.")
+    assert len(obs_tokeep[0]) > 0
+
+    aps = aps[obs_tokeep[0]]
+    X = X[obs_tokeep[0]]
+    Z = Z[obs_tokeep[0]]
+    W = W[obs_tokeep[0]]
+
+    cols = {"aps":aps, "Z":Z}
+
+    dep = []
+    if len(X.shape) > 1:
+        for i in range(X.shape[1]):
+            cols["X"+str(i)] =  X[:,i]
+            dep.append("X"+str(i))
+    else:
+        cols["X"] =  X
+        dep.append("X")
+
+    exog = ["aps", "Z"]
+    constant = False
+    if len(W.shape) > 1:
+        for i in range(W.shape[1]):
+            cols["W"+str(i)] =  W[:,i]
+            exog.append("W"+str(i))
+            constant = (len(np.unique(W[:,i])) == 1) | constant
+    else:
+        constant = len(np.unique(W)) == 1
+        cols["W"] =  W
+        exog.append("W")
+    # Check for single non-degeneracy
+    constant = (len(np.unique(aps)) == 1) | constant
+    if not constant:
+        cols["const"] = np.ones(len(aps))
+        exog.append("const")
+
+    df = pd.DataFrame(cols)
+
+    # Covariate balance test
+    mv_ols_res = SUR.multivariate_ls(df[dep], df[exog]).fit(cov_type = cov_type)
+    if verbose == True:
+        print(mv_ols_res)
+
+    # Joint hypothesis test: use multivariate_OLS from statsmodels
+    # Edge case: single variable then joint test is the same as the original
+    if len(dep) > 1:
+        mv_ols_joint = _MultivariateOLS(df[dep], df[exog]).fit()
+        L = np.zeros((1,len(exog)))
+        L[:,1] = 1
+        mv_test_res = mv_ols_joint.mv_test([("Z", L)])
+    else:
+        mv_test_res = None
+
+    # Compile results
+    res_dict = {}
+    for x_var in dep:
+        res_dict[x_var] = {}
+        res_dict[x_var]['coef'] = mv_ols_res.params[f"{x_var}_Z"]
+        res_dict[x_var]['p'] = mv_ols_res.pvalues[f"{x_var}_Z"]
+        res_dict[x_var]['t'] = mv_ols_res.tstats[f"{x_var}_Z"]
+        res_dict[x_var]['n'] = mv_ols_res.nobs/len(dep)
+        res_dict[x_var]['stderr'] = mv_ols_res.std_errors[f"{x_var}_Z"]
+    if mv_test_res is None:
+        res_dict['joint'] = {}
+        res_dict['joint']['p'] = mv_ols_res.pvalues[f"{dep[0]}_Z"]
+        res_dict['joint']['t'] = mv_ols_res.tstats[f"{dep[0]}_Z"]
     else:
         res_dict['joint'] = {}
         res_dict['joint']['p'] = mv_test_res.results['Z']['stat'].iloc[0, 4]
